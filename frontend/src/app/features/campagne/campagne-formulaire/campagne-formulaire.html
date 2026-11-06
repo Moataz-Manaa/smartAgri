@@ -1,0 +1,184 @@
+<section class="mx-auto max-w-3xl">
+  <a
+    routerLink="/campagnes"
+    class="text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >← Retour aux campagnes</a
+  >
+  <h1 class="mt-4 text-3xl font-bold text-slate-900">
+    {{
+      estCloturee()
+        ? 'Campagne clôturée'
+        : id === null
+          ? 'Nouvelle campagne'
+          : 'Modifier la campagne'
+    }}
+  </h1>
+  <p class="mt-2 text-sm text-slate-600">Les champs marqués d’un astérisque sont obligatoires.</p>
+  <p class="mt-2 text-sm text-slate-500">
+    Statut : {{ statut | statutCampagne }}. Le changement de statut se fait depuis le détail de la
+    campagne.
+  </p>
+  @if (estCloturee()) {
+    <p role="status" class="mt-4 rounded-lg bg-slate-100 p-4 text-sm text-slate-700">
+      Cette campagne est clôturée. Ses informations sont conservées en lecture seule.
+    </p>
+  }
+  @if (chargement()) {
+    <p role="status" class="mt-4 text-sm text-slate-600">Chargement…</p>
+  }
+  <form
+    #formulaire="ngForm"
+    (ngSubmit)="enregistrer(formulaire)"
+    novalidate
+    class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  >
+    <fieldset
+      [disabled]="formulaireBloque() || estCloturee()"
+      class="grid min-w-0 gap-5 sm:grid-cols-2"
+    >
+      <legend class="sr-only">Informations de la campagne</legend>
+      <div class="sm:col-span-2">
+        <label for="nom" class="libelle">Nom *</label>
+        <input
+          id="nom"
+          name="nom"
+          type="text"
+          [(ngModel)]="nom"
+          #nomChamp="ngModel"
+          required
+          maxlength="100"
+          class="champ"
+          aria-describedby="nom-erreur"
+          [attr.aria-invalid]="nomChamp.invalid && nomChamp.touched"
+        />
+        @if (nomChamp.invalid && nomChamp.touched) {
+          <p id="nom-erreur" class="mt-2 text-sm text-red-700">
+            Le nom est obligatoire, avec au maximum 100 caractères.
+          </p>
+        }
+      </div>
+      <div>
+        <label for="dateDebut" class="libelle">Date de début *</label>
+        <input
+          id="dateDebut"
+          name="dateDebut"
+          type="date"
+          [(ngModel)]="dateDebut"
+          #debutChamp="ngModel"
+          required
+          class="champ"
+          aria-describedby="debut-erreur"
+          [attr.aria-invalid]="debutChamp.invalid && debutChamp.touched"
+        />
+        @if (debutChamp.invalid && debutChamp.touched) {
+          <p id="debut-erreur" class="mt-2 text-sm text-red-700">
+            La date de début est obligatoire.
+          </p>
+        }
+      </div>
+      <div>
+        <label for="dateFin" class="libelle">Date de fin *</label>
+        <input
+          id="dateFin"
+          name="dateFin"
+          type="date"
+          [(ngModel)]="dateFin"
+          #finChamp="ngModel"
+          required
+          class="champ"
+          aria-describedby="fin-erreur"
+          [attr.aria-invalid]="finChamp.invalid && finChamp.touched"
+        />
+        @if (finChamp.invalid && finChamp.touched) {
+          <p id="fin-erreur" class="mt-2 text-sm text-red-700">La date de fin est obligatoire.</p>
+        }
+        @if (dateDebut && dateFin && dateFin <= dateDebut) {
+          <p class="mt-2 text-sm text-red-700">
+            La date de fin doit être postérieure à la date de début.
+          </p>
+        }
+      </div>
+      <div class="sm:col-span-2">
+        <label for="description" class="libelle">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          [(ngModel)]="description"
+          maxlength="255"
+          rows="4"
+          class="champ"
+        ></textarea>
+      </div>
+    </fieldset>
+    <fieldset [disabled]="formulaireBloque()" class="mt-6 min-w-0">
+      <legend class="mb-2 text-sm font-semibold text-slate-700">Parcelles concernées *</legend>
+      <p id="parcelles-aide" class="mb-3 text-sm text-slate-500">
+        Sélectionnez une ou plusieurs parcelles. Les agriculteurs et agronomes verront cette
+        campagne selon leurs affectations.
+      </p>
+      @if (peutAssocierParcelles()) {
+        <p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          Cette ancienne campagne n’a pas encore de parcelles. Vous pouvez les définir une première
+          fois sans modifier les informations clôturées.
+        </p>
+      }
+      <div class="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
+        @for (parcelle of parcelles(); track parcelle.id) {
+          <label
+            [for]="'campagne-parcelle-' + parcelle.id"
+            class="flex cursor-pointer items-start gap-3 rounded-lg p-3 hover:bg-emerald-50"
+          >
+            <input
+              type="checkbox"
+              [id]="'campagne-parcelle-' + parcelle.id"
+              [checked]="parcelleIds.includes(parcelle.id)"
+              (change)="selectionnerParcelle(parcelle.id, $event)"
+              aria-describedby="parcelles-aide"
+              class="mt-1 h-4 w-4 shrink-0 accent-emerald-700 focus-visible:outline-2 focus-visible:outline-emerald-600"
+            />
+            <span class="min-w-0 break-words text-sm"
+              ><strong>{{ parcelle.code }} — {{ parcelle.nom }}</strong
+              ><span class="mt-1 block text-slate-500">{{ parcelle.exploitationNom }}</span></span
+            >
+          </label>
+        } @empty {
+          <p class="p-3 text-sm text-slate-500">Aucune parcelle disponible.</p>
+        }
+      </div>
+      <p class="mt-2 text-sm text-slate-500">
+        {{ parcelleIds.length }} parcelle(s) sélectionnée(s)
+      </p>
+    </fieldset>
+    @if (!chargement() && !echecChargement() && parcelles().length === 0) {
+      <p class="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-900">
+        Créez une parcelle avant de préparer la campagne.
+        <a routerLink="/parcelles/nouvelle" class="font-semibold underline">Créer une parcelle</a>
+      </p>
+    }
+    @if (erreur()) {
+      <p role="alert" class="mt-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">{{ erreur() }}</p>
+    }
+    <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+      <a
+        routerLink="/campagnes"
+        class="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >Retour à la liste</a
+      >
+      @if (!estCloturee() || peutAssocierParcelles()) {
+        <button
+          type="submit"
+          [disabled]="formulaireBloque()"
+          class="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >
+          {{
+            enregistrement()
+              ? 'Enregistrement…'
+              : peutAssocierParcelles()
+                ? 'Associer les parcelles'
+                : 'Enregistrer'
+          }}
+        </button>
+      }
+    </div>
+  </form>
+</section>

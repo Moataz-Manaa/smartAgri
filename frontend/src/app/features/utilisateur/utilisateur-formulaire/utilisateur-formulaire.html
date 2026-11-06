@@ -1,0 +1,225 @@
+<section class="mx-auto max-w-3xl">
+  <a
+    routerLink="/utilisateurs"
+    class="text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+  >
+    ← Retour aux utilisateurs
+  </a>
+
+  <h1 class="mt-4 text-3xl font-bold text-slate-900">
+    @if (id === null) {
+      Nouvel utilisateur
+    } @else {
+      Modifier l’utilisateur
+    }
+  </h1>
+
+  <p class="mt-2 text-sm text-slate-600">Les champs marqués d’un astérisque sont obligatoires.</p>
+
+  @if (chargement()) {
+    <p role="status" class="mt-4 text-sm text-slate-600">Chargement de l’utilisateur…</p>
+  }
+
+  <form
+    #formulaire="ngForm"
+    (ngSubmit)="enregistrer(formulaire)"
+    class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    novalidate
+  >
+    <fieldset [disabled]="formulaireBloque()" class="grid min-w-0 gap-5 sm:grid-cols-2">
+      <legend class="sr-only">Informations du compte utilisateur</legend>
+
+      <div>
+        <label for="prenom" class="libelle"> Prénom * </label>
+
+        <input
+          id="prenom"
+          name="prenom"
+          [(ngModel)]="prenom"
+          #prenomChamp="ngModel"
+          type="text"
+          required
+          maxlength="100"
+          autocomplete="given-name"
+          class="champ"
+          aria-describedby="prenom-erreur"
+        />
+
+        @if ((prenomChamp.touched || formulaire.submitted) && prenom.trim() === '') {
+          <p id="prenom-erreur" class="mt-1 text-sm text-red-700">Le prénom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="nom" class="libelle"> Nom * </label>
+
+        <input
+          id="nom"
+          name="nom"
+          [(ngModel)]="nom"
+          #nomChamp="ngModel"
+          type="text"
+          required
+          maxlength="100"
+          autocomplete="family-name"
+          class="champ"
+          aria-describedby="nom-erreur"
+        />
+
+        @if ((nomChamp.touched || formulaire.submitted) && nom.trim() === '') {
+          <p id="nom-erreur" class="mt-1 text-sm text-red-700">Le nom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="username" class="libelle"> Identifiant de connexion * </label>
+
+        <input
+          id="username"
+          name="username"
+          [(ngModel)]="username"
+          #usernameChamp="ngModel"
+          [readonly]="id !== null"
+          type="text"
+          required
+          maxlength="100"
+          autocomplete="off"
+          spellcheck="false"
+          class="champ"
+          aria-describedby="username-aide username-erreur"
+        />
+
+        <p id="username-aide" class="mt-1 text-sm text-slate-500">
+          @if (id === null) {
+            Cet identifiant sera utilisé pour se connecter.
+          } @else {
+            L’identifiant de connexion est conservé.
+          }
+        </p>
+
+        @if ((usernameChamp.touched || formulaire.submitted) && username.trim() === '') {
+          <p id="username-erreur" class="mt-1 text-sm text-red-700">
+            L’identifiant est obligatoire.
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="email" class="libelle"> Email * </label>
+
+        <input
+          id="email"
+          name="email"
+          [(ngModel)]="email"
+          #emailChamp="ngModel"
+          type="email"
+          required
+          email
+          maxlength="255"
+          autocomplete="email"
+          class="champ"
+          aria-describedby="email-erreur"
+        />
+
+        @if (emailChamp.invalid && (emailChamp.touched || formulaire.submitted)) {
+          <p id="email-erreur" class="mt-1 text-sm text-red-700">
+            Renseigne une adresse email valide.
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="role" class="libelle"> Rôle * </label>
+
+        <select
+          id="role"
+          name="role"
+          [(ngModel)]="role"
+          #roleChamp="ngModel"
+          required
+          class="champ"
+          aria-describedby="role-erreur"
+        >
+          <option [ngValue]="null">Sélectionner un rôle</option>
+
+          <option value="AGRICULTEUR">Agriculteur</option>
+
+          <option value="AGRONOME">Ingénieur agronome</option>
+
+          <option value="ADMIN">Administrateur</option>
+        </select>
+
+        @if (roleChamp.invalid && (roleChamp.touched || formulaire.submitted)) {
+          <p id="role-erreur" class="mt-1 text-sm text-red-700">Sélectionne un rôle.</p>
+        }
+      </div>
+
+      @if (id === null) {
+        <div>
+          <label for="motDePasse" class="libelle"> Mot de passe initial * </label>
+
+          <input
+            id="motDePasse"
+            name="motDePasse"
+            [(ngModel)]="motDePasse"
+            #motDePasseChamp="ngModel"
+            type="password"
+            required
+            minlength="8"
+            maxlength="128"
+            autocomplete="new-password"
+            class="champ"
+            aria-describedby="mot-de-passe-aide mot-de-passe-erreur"
+          />
+
+          <p id="mot-de-passe-aide" class="mt-1 text-sm text-slate-500">
+            Entre 8 et 128 caractères.
+          </p>
+
+          @if (
+            (motDePasseChamp.touched || formulaire.submitted) &&
+            (motDePasseChamp.invalid || motDePasse.trim() === '')
+          ) {
+            <p id="mot-de-passe-erreur" class="mt-1 text-sm text-red-700">
+              Renseigne un mot de passe valide.
+            </p>
+          }
+        </div>
+      }
+    </fieldset>
+
+    @if (erreur()) {
+      <p
+        role="alert"
+        class="mt-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      >
+        {{ erreur() }}
+      </p>
+    }
+
+    <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+      @if (!enregistrement()) {
+        <a
+          routerLink="/utilisateurs"
+          class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+        >
+          Annuler
+        </a>
+      }
+
+      <button
+        type="submit"
+        [disabled]="formulaireBloque()"
+        class="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+      >
+        @if (enregistrement()) {
+          Enregistrement…
+        } @else if (id === null) {
+          Créer l’utilisateur
+        } @else {
+          Enregistrer les modifications
+        }
+      </button>
+    </div>
+  </form>
+</section>

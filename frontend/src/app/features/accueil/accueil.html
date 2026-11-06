@@ -1,0 +1,185 @@
+<section aria-labelledby="titre-accueil">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wider text-emerald-700">
+        Votre espace SmartAgri
+      </p>
+      <h1 id="titre-accueil" class="mt-2 text-3xl font-bold text-slate-900">
+        Bonjour, {{ authService.obtenirNomUtilisateur() }}
+      </h1>
+    </div>
+    <span
+      class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800"
+      >{{ obtenirRole() }}</span
+    >
+  </div>
+
+  <div class="mb-8 rounded-2xl bg-emerald-900 px-6 py-8 text-white sm:px-8">
+    @if (estAdministrateur()) {
+      <h2 class="text-2xl font-bold">Organisez votre activité agricole</h2>
+      <p class="mt-3 max-w-2xl leading-relaxed text-emerald-100">
+        Gérez les exploitations, les parcelles et les équipes de votre société depuis un seul
+        espace.
+      </p>
+      <a
+        routerLink="/affectations"
+        class="mt-6 inline-block rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >Organiser les affectations →</a
+      >
+    } @else if (estAgronome()) {
+      <h2 class="text-2xl font-bold">Retrouvez les parcelles que vous accompagnez</h2>
+      <p class="mt-3 max-w-2xl leading-relaxed text-emerald-100">
+        Consultez les caractéristiques des parcelles qui vous sont confiées et les informations de
+        leurs exploitations.
+      </p>
+      <a
+        routerLink="/parcelles"
+        class="mt-6 inline-block rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >Consulter mes parcelles →</a
+      >
+    } @else {
+      <h2 class="text-2xl font-bold">Vos parcelles, à portée de main</h2>
+      <p class="mt-3 max-w-2xl leading-relaxed text-emerald-100">
+        Retrouvez les parcelles sur lesquelles vous intervenez, leur superficie et leurs
+        informations agricoles.
+      </p>
+      <a
+        routerLink="/parcelles"
+        class="mt-6 inline-block rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >Voir mes parcelles →</a
+      >
+    }
+  </div>
+
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-xl font-bold text-slate-900">Vue d’ensemble</h2>
+  </div>
+  @if (chargement()) {
+    <p role="status" class="mb-4 text-sm text-slate-500">Chargement des indicateurs…</p>
+  }
+  @if (erreur()) {
+    <p
+      role="alert"
+      class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+    >
+      {{ erreur() }}
+    </p>
+  }
+  <div
+    [attr.aria-busy]="chargement()"
+    class="grid gap-4 sm:grid-cols-2"
+    [class.xl:grid-cols-4]="estAdministrateur()"
+  >
+    <a routerLink="/exploitations" class="carte" data-testid="nombre-exploitations">
+      <p class="libelle">
+        {{ estAdministrateur() ? 'Exploitations' : 'Exploitations accessibles' }}
+      </p>
+      <p class="nombre">{{ nombreExploitations() ?? '—' }}</p>
+      <p class="mt-3 text-sm font-medium text-emerald-700">Consulter les exploitations →</p>
+    </a>
+    <a routerLink="/parcelles" class="carte" data-testid="nombre-parcelles">
+      <p class="libelle">{{ estAdministrateur() ? 'Parcelles' : 'Mes parcelles' }}</p>
+      <p class="nombre">{{ nombreParcelles() ?? '—' }}</p>
+      <p class="mt-3 text-sm font-medium text-emerald-700">Consulter les parcelles →</p>
+    </a>
+    @if (estAdministrateur()) {
+      <a routerLink="/utilisateurs" class="carte" data-testid="nombre-utilisateurs">
+        <p class="libelle">Utilisateurs enregistrés</p>
+        <p class="nombre">{{ nombreUtilisateurs() ?? '—' }}</p>
+        <p class="mt-3 text-sm font-medium text-emerald-700">Gérer les comptes →</p>
+      </a>
+      <a routerLink="/affectations" class="carte" data-testid="nombre-affectations">
+        <p class="libelle">Affectations</p>
+        <p class="nombre">{{ nombreAffectations() ?? '—' }}</p>
+        <p class="mt-3 text-sm font-medium text-emerald-700">Gérer les affectations →</p>
+      </a>
+    }
+  </div>
+
+  @if (!chargement() && !erreur() && nombreParcelles() === 0) {
+    <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+      @if (estAdministrateur()) {
+        Aucune parcelle n’est enregistrée. Commencez par créer une exploitation, puis ajoutez ses
+        parcelles.
+      } @else {
+        Aucune parcelle ne vous est encore affectée. Contactez votre administrateur pour obtenir un
+        accès.
+      }
+    </div>
+  }
+
+  @if (estAdministrateur()) {
+    <h2 class="mb-4 mt-8 text-xl font-bold text-slate-900">Actions rapides</h2>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <a routerLink="/exploitations/nouvelle" class="action"
+        ><span class="font-semibold">Créer une exploitation</span
+        ><span class="mt-2 text-sm text-slate-500"
+          >Ajouter un site agricole à votre organisation.</span
+        ></a
+      >
+      <a routerLink="/parcelles/nouvelle" class="action"
+        ><span class="font-semibold">Créer une parcelle</span
+        ><span class="mt-2 text-sm text-slate-500"
+          >Rattacher une nouvelle parcelle à une exploitation.</span
+        ></a
+      >
+      <a routerLink="/utilisateurs/nouveau" class="action"
+        ><span class="font-semibold">Créer un utilisateur</span
+        ><span class="mt-2 text-sm text-slate-500"
+          >Préparer le compte d’un membre de votre équipe.</span
+        ></a
+      >
+      <a routerLink="/affectations" class="action"
+        ><span class="font-semibold">Affecter une personne</span
+        ><span class="mt-2 text-sm text-slate-500"
+          >Attribuer les parcelles aux agriculteurs et agronomes.</span
+        ></a
+      >
+    </div>
+  } @else {
+    <div class="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
+      <h2 class="text-lg font-semibold text-slate-900">
+        {{ estAgronome() ? 'Votre espace d’accompagnement' : 'Votre espace agricole' }}
+      </h2>
+      <p class="mt-2 max-w-3xl leading-relaxed text-slate-600">
+        Ouvrez une parcelle pour consulter sa superficie, son type de sol et son mode d’irrigation.
+        Depuis une exploitation accessible, retrouvez les parcelles qui vous sont affectées.
+      </p>
+      <p class="mt-3 text-sm text-slate-500">
+        Pour modifier vos affectations ou les informations d’une parcelle, contactez votre
+        administrateur.
+      </p>
+    </div>
+  }
+  <h2 class="mb-4 mt-8 text-xl font-bold text-slate-900">Catalogue agricole</h2>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <a routerLink="/cultures" class="action">
+      <span class="font-semibold">Cultures</span>
+      <span class="mt-2 text-sm text-slate-500"
+        >Retrouvez les cultures disponibles dans votre société.</span
+      >
+    </a>
+    <a routerLink="/varietes" class="action">
+      <span class="font-semibold">Variétés</span>
+      <span class="mt-2 text-sm text-slate-500"
+        >Consultez les variétés associées à chaque culture.</span
+      >
+    </a>
+  </div>
+  <div class="mt-5">
+    <a routerLink="/campagnes" class="action">
+      <span class="font-semibold">Campagnes agricoles</span>
+      <span class="mt-2 text-sm text-slate-500"
+        >Consultez les périodes de suivi et leur état d’avancement.</span
+      >
+    </a>
+  </div>
+  <div class="mt-5">
+    <a routerLink="/plantations" class="action"
+      ><span class="font-semibold">Plantations</span>
+      <span class="mt-2 text-sm text-slate-500"
+        >Retrouvez les fiches de suivi de vos parcelles par campagne.</span
+      ></a
+    >
+  </div>
+</section>

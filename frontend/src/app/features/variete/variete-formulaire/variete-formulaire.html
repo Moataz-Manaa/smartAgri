@@ -1,0 +1,105 @@
+<section class="mx-auto max-w-3xl">
+  <a
+    routerLink="/varietes"
+    class="text-sm font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >← Retour aux variétés</a
+  >
+  <h1 class="mt-4 text-3xl font-bold text-slate-900">
+    {{ id === null ? 'Nouvelle variété' : 'Modifier la variété' }}
+  </h1>
+  <p class="mt-2 text-sm text-slate-600">Les champs marqués d’un astérisque sont obligatoires.</p>
+  @if (chargement()) {
+    <p role="status" class="mt-4 text-sm text-slate-600">Chargement…</p>
+  }
+  <form
+    #formulaire="ngForm"
+    (ngSubmit)="enregistrer(formulaire)"
+    novalidate
+    class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  >
+    <fieldset
+      [disabled]="chargement() || enregistrement() || echecChargement() || cultures().length === 0"
+      class="grid min-w-0 gap-5 sm:grid-cols-2"
+    >
+      <legend class="sr-only">Informations de la variété</legend>
+      <div class="sm:col-span-2">
+        <label for="cultureId" class="libelle">Culture *</label>
+        <select
+          id="cultureId"
+          name="cultureId"
+          [(ngModel)]="cultureId"
+          #cultureChamp="ngModel"
+          required
+          class="champ"
+          aria-describedby="culture-erreur"
+          [attr.aria-invalid]="cultureChamp.invalid && cultureChamp.touched"
+        >
+          <option [ngValue]="null">Sélectionner une culture</option>
+          @for (culture of cultures(); track culture.id) {
+            <option [ngValue]="culture.id">{{ culture.nom }}</option>
+          }
+        </select>
+        @if (cultureChamp.invalid && cultureChamp.touched) {
+          <p id="culture-erreur" class="mt-2 text-sm text-red-700">La culture est obligatoire.</p>
+        }
+      </div>
+      <div class="sm:col-span-2">
+        <label for="nom" class="libelle">Nom *</label>
+        <input
+          id="nom"
+          name="nom"
+          type="text"
+          [(ngModel)]="nom"
+          #nomChamp="ngModel"
+          required
+          maxlength="100"
+          class="champ"
+          aria-describedby="nom-erreur"
+          [attr.aria-invalid]="nomChamp.invalid && nomChamp.touched"
+        />
+        @if (nomChamp.invalid && nomChamp.touched) {
+          <p id="nom-erreur" class="mt-2 text-sm text-red-700">
+            Le nom est obligatoire, avec au maximum 100 caractères.
+          </p>
+        }
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="description" class="libelle">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          [(ngModel)]="description"
+          maxlength="255"
+          rows="4"
+          class="champ"
+        ></textarea>
+      </div>
+    </fieldset>
+    @if (!chargement() && !echecChargement() && cultures().length === 0) {
+      <p class="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+        Créez une culture avant d’ajouter une variété.
+        <a routerLink="/cultures/nouvelle" class="font-semibold underline">Créer une culture</a>
+      </p>
+    }
+    @if (erreur()) {
+      <p role="alert" class="mt-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">{{ erreur() }}</p>
+    }
+    <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+      <a
+        routerLink="/varietes"
+        class="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >Annuler</a
+      >
+      <button
+        type="submit"
+        [disabled]="
+          chargement() || enregistrement() || echecChargement() || cultures().length === 0
+        "
+        class="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        {{ enregistrement() ? 'Enregistrement…' : 'Enregistrer' }}
+      </button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,120 @@
+<aside class="h-full border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+  <div class="p-4">
+    <button
+      type="button"
+      (click)="basculerMenu()"
+      [attr.aria-expanded]="menuOuvert()"
+      aria-controls="navigation-laterale"
+      class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 lg:hidden focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >
+      Menu
+
+      <span aria-hidden="true">
+        {{ menuOuvert() ? '−' : '+' }}
+      </span>
+    </button>
+
+    <nav
+      id="navigation-laterale"
+      aria-label="Navigation principale"
+      [class.hidden]="!menuOuvert()"
+      class="mt-4 space-y-2 lg:mt-0 lg:block"
+      (keydown.escape)="fermerMenu()"
+    >
+      <p class="mb-4 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Gestion agricole
+      </p>
+
+      <a
+        routerLink="/accueil"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Accueil
+      </a>
+
+      <a
+        routerLink="/exploitations"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        {{ authService.possedeRole('ADMIN') ? 'Exploitations' : 'Exploitations accessibles' }}
+      </a>
+
+      <a
+        routerLink="/parcelles"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        {{ authService.possedeRole('ADMIN') ? 'Parcelles' : 'Mes parcelles' }}
+      </a>
+
+      @if (authService.possedeRole('ADMIN')) {
+        <a
+          routerLink="/utilisateurs"
+          routerLinkActive="bg-emerald-50 text-emerald-800"
+          ariaCurrentWhenActive="page"
+          (click)="fermerMenu()"
+          class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >
+          Utilisateurs
+        </a>
+        <a
+          routerLink="/affectations"
+          routerLinkActive="bg-emerald-50 text-emerald-800"
+          ariaCurrentWhenActive="page"
+          (click)="fermerMenu()"
+          class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >
+          Affectations
+        </a>
+      }
+      <p class="mb-4 mt-6 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Catalogue agricole
+      </p>
+      <a
+        routerLink="/cultures"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Cultures
+      </a>
+      <a
+        routerLink="/varietes"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Variétés
+      </a>
+      <p class="mb-4 mt-6 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Suivi agricole
+      </p>
+      <a
+        routerLink="/campagnes"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >Campagnes</a
+      >
+      <a
+        routerLink="/plantations"
+        routerLinkActive="bg-emerald-50 text-emerald-800"
+        ariaCurrentWhenActive="page"
+        (click)="fermerMenu()"
+        class="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >Plantations</a
+      >
+    </nav>
+  </div>
+</aside>

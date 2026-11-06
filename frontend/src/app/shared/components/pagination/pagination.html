@@ -1,0 +1,42 @@
+<nav
+  aria-label="Pagination"
+  class="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+>
+  <div class="flex flex-wrap items-center gap-4">
+    <p role="status">{{ totalElements }} résultat{{ totalElements > 1 ? 's' : '' }}</p>
+    <label class="flex items-center gap-2">
+      <span>Par page</span>
+      <select
+        [value]="taille"
+        (change)="changerTaille($event)"
+        [disabled]="desactive"
+        class="rounded-lg border border-slate-300 bg-white px-2 py-2 focus-visible:outline-2 focus-visible:outline-emerald-600 disabled:opacity-50"
+      >
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </label>
+  </div>
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      (click)="changerPage(page - 1)"
+      [disabled]="desactive || page === 0 || totalPages === 0"
+      class="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >
+      Précédent
+    </button>
+    <span class="whitespace-nowrap"
+      >Page {{ totalPages === 0 ? 0 : page + 1 }} / {{ totalPages }}</span
+    >
+    <button
+      type="button"
+      (click)="changerPage(page + 1)"
+      [disabled]="desactive || page + 1 >= totalPages"
+      class="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >
+      Suivant
+    </button>
+  </div>
+</nav>

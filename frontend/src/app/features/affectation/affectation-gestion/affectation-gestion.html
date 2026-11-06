@@ -1,0 +1,202 @@
+<section aria-labelledby="titre-affectations">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 id="titre-affectations" class="text-3xl font-bold text-slate-900">Affectations</h1>
+      <p class="mt-2 text-sm text-slate-600">
+        Organisez les agriculteurs et agronomes qui interviennent sur chaque parcelle.
+      </p>
+    </div>
+  </div>
+
+  @if (erreur()) {
+    <p
+      role="alert"
+      class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+    >
+      {{ erreur() }}
+    </p>
+  }
+  @if (message()) {
+    <p
+      role="status"
+      class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+    >
+      {{ message() }}
+    </p>
+  }
+  @if (chargement()) {
+    <p
+      role="status"
+      class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600"
+    >
+      Chargement des affectations…
+    </p>
+  } @else {
+    <form
+      #formulaire="ngForm"
+      (ngSubmit)="affecter(formulaire)"
+      novalidate
+      class="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <h2 class="mb-2 text-lg font-semibold text-slate-900">Ajouter une affectation</h2>
+      <p class="mb-5 text-sm text-slate-500">
+        Une parcelle peut accueillir plusieurs personnes. Chaque affectation se retire
+        individuellement.
+      </p>
+      <fieldset
+        [disabled]="operationEnCours() || parcelles().length === 0 || utilisateurs().length === 0"
+        class="grid min-w-0 gap-5 md:grid-cols-2"
+      >
+        <legend class="sr-only">Sélection de la parcelle et de l’utilisateur</legend>
+        <div>
+          <label for="parcelleId" class="mb-2 block text-sm font-medium text-slate-700"
+            >Parcelle *</label
+          >
+          <select id="parcelleId" name="parcelleId" [(ngModel)]="parcelleId" required class="champ">
+            <option [ngValue]="null">Sélectionner une parcelle</option>
+            @for (parcelle of parcelles(); track parcelle.id) {
+              <option [ngValue]="parcelle.id">
+                {{ parcelle.code }} — {{ parcelle.nom }} ({{ parcelle.exploitationNom }})
+              </option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="utilisateurId" class="mb-2 block text-sm font-medium text-slate-700"
+            >Agriculteur ou agronome *</label
+          >
+          <select
+            id="utilisateurId"
+            name="utilisateurId"
+            [(ngModel)]="utilisateurId"
+            required
+            class="champ"
+          >
+            <option [ngValue]="null">Sélectionner une personne</option>
+            @for (utilisateur of utilisateurs(); track utilisateur.id) {
+              <option [ngValue]="utilisateur.id">
+                {{ utilisateur.prenom }} {{ utilisateur.nom }} —
+                {{ utilisateur.role === 'AGRONOME' ? 'Agronome' : 'Agriculteur' }} ({{
+                  utilisateur.email
+                }})
+              </option>
+            }
+          </select>
+        </div>
+        <div class="md:col-span-2 md:text-right">
+          <button
+            type="submit"
+            class="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          >
+            {{ enregistrement() ? 'Affectation…' : 'Affecter à la parcelle' }}
+          </button>
+        </div>
+      </fieldset>
+      @if (parcelles().length === 0) {
+        <p class="mt-4 text-sm text-amber-800">Créez une parcelle pour commencer.</p>
+      } @else if (utilisateurs().length === 0) {
+        <p class="mt-4 text-sm text-amber-800">
+          Créez ou activez un compte agriculteur ou agronome pour commencer.
+        </p>
+      }
+    </form>
+
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
+      <h2 class="text-lg font-semibold text-slate-900">Affectations en place</h2>
+      <div class="flex flex-wrap items-center gap-2">
+        <label for="filtreParcelleId" class="text-sm text-slate-600">Filtrer par parcelle</label>
+        <select
+          id="filtreParcelleId"
+          [ngModel]="filtreParcelleId"
+          (ngModelChange)="changerFiltre($event)"
+          [disabled]="operationEnCours()"
+          class="champ w-auto"
+        >
+          <option [ngValue]="null">Toutes les parcelles</option>
+          @for (parcelle of parcelles(); track parcelle.id) {
+            <option [ngValue]="parcelle.id">{{ parcelle.code }} — {{ parcelle.nom }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    @if (affectations().length === 0) {
+      <p
+        class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600"
+      >
+        Aucune affectation pour cette sélection.
+      </p>
+    } @else {
+      <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table class="w-full text-left text-sm">
+          <caption class="sr-only">
+            Utilisateurs affectés aux parcelles
+          </caption>
+          <thead class="border-b border-slate-200 bg-slate-100">
+            <tr>
+              <th scope="col" class="px-5 py-4">Parcelle</th>
+              <th scope="col" class="px-5 py-4">Personne</th>
+              <th scope="col" class="px-5 py-4">Rôle actuel</th>
+              <th scope="col" class="px-5 py-4">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (affectation of affectations(); track affectation.id) {
+              <tr class="hover:bg-slate-50">
+                <td class="px-5 py-4">
+                  <p class="font-semibold text-emerald-800">
+                    {{ affectation.parcelleCode }} — {{ affectation.parcelleNom }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">{{ affectation.exploitationNom }}</p>
+                </td>
+                <td class="px-5 py-4">
+                  <p class="font-medium text-slate-900">
+                    {{ affectation.utilisateurPrenom }} {{ affectation.utilisateurNom }}
+                  </p>
+                  <p class="mt-1 text-xs text-slate-500">{{ affectation.utilisateurEmail }}</p>
+                </td>
+                <td class="px-5 py-4">
+                  {{
+                    affectation.role === 'AGRONOME'
+                      ? 'Agronome'
+                      : affectation.role === 'AGRICULTEUR'
+                        ? 'Agriculteur'
+                        : 'Rôle à vérifier'
+                  }}
+                </td>
+                <td class="px-5 py-4">
+                  <button
+                    type="button"
+                    (click)="retirer(affectation)"
+                    [disabled]="operationEnCours()"
+                    [attr.aria-label]="
+                      'Retirer ' +
+                      affectation.utilisateurPrenom +
+                      ' ' +
+                      affectation.utilisateurNom +
+                      ' de ' +
+                      affectation.parcelleCode
+                    "
+                    class="rounded-lg border border-red-200 px-3 py-2 font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-red-600"
+                  >
+                    {{ retraitEnCours() === affectation.id ? 'Retrait…' : 'Retirer' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+  @if (!erreur()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="operationEnCours()"
+      (pageChange)="chargerPage($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

@@ -1,0 +1,157 @@
+<section aria-labelledby="titre-utilisateurs">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 id="titre-utilisateurs" class="text-3xl font-bold text-slate-900">Utilisateurs</h1>
+
+      <p class="mt-2 text-sm text-slate-600">Consultez les comptes et gérez leur activation.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <a
+        routerLink="/utilisateurs/nouveau"
+        class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+      >
+        Nouvel utilisateur
+      </a>
+    </div>
+  </div>
+
+  @if (erreur()) {
+    <p
+      role="alert"
+      class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+    >
+      {{ erreur() }}
+    </p>
+  }
+
+  @if (message()) {
+    <p
+      role="status"
+      class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+    >
+      {{ message() }}
+    </p>
+  }
+
+  @if (chargement()) {
+    <div
+      role="status"
+      class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600"
+    >
+      Chargement des utilisateurs…
+    </div>
+  } @else if (utilisateurs().length === 0 && !erreur()) {
+    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+      <h2 class="text-lg font-semibold text-slate-900">Aucun profil utilisateur enregistré</h2>
+
+      <p class="mt-2 text-sm text-slate-600">
+        Les profils créés depuis SmartAgri apparaîtront ici.
+      </p>
+    </div>
+  } @else if (utilisateurs().length > 0) {
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-left text-sm">
+        <caption class="sr-only">
+          Comptes utilisateurs et état d’activation
+        </caption>
+
+        <thead class="border-b border-slate-200 bg-slate-100">
+          <tr>
+            <th scope="col" class="px-6 py-4">Utilisateur</th>
+            <th scope="col" class="px-6 py-4">Identifiant</th>
+            <th scope="col" class="px-6 py-4">Email</th>
+            <th scope="col" class="px-6 py-4">Rôle</th>
+            <th scope="col" class="px-6 py-4">État</th>
+            <th scope="col" class="px-6 py-4">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100">
+          @for (utilisateur of utilisateurs(); track utilisateur.id) {
+            <tr class="hover:bg-slate-50">
+              <td class="px-6 py-4 font-medium text-slate-900">
+                {{ utilisateur.prenom }} {{ utilisateur.nom }}
+              </td>
+
+              <td class="px-6 py-4 text-slate-600">
+                {{ utilisateur.username }}
+              </td>
+
+              <td class="px-6 py-4 text-slate-600">
+                {{ utilisateur.email }}
+              </td>
+
+              <td class="px-6 py-4 text-slate-600">
+                @if (utilisateur.role === 'ADMIN') {
+                  Administrateur
+                } @else if (utilisateur.role === 'AGRICULTEUR') {
+                  Agriculteur
+                } @else if (utilisateur.role === 'AGRONOME') {
+                  Ingénieur agronome
+                } @else {
+                  Non attribué
+                }
+              </td>
+
+              <td class="px-6 py-4">
+                @if (utilisateur.actif) {
+                  <span
+                    class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                  >
+                    Actif
+                  </span>
+                } @else {
+                  <span
+                    class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+                  >
+                    Désactivé
+                  </span>
+                }
+              </td>
+
+              <td class="px-6 py-4">
+                <a
+                  [routerLink]="['/utilisateurs', utilisateur.id, 'modifier']"
+                  [attr.aria-label]="'Modifier ' + utilisateur.username"
+                  class="mr-3 inline-block font-semibold text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                >
+                  Modifier
+                </a>
+
+                <button
+                  type="button"
+                  (click)="changerEtat(utilisateur)"
+                  [disabled]="utilisateurEnCours() !== null"
+                  [attr.aria-label]="
+                    (utilisateur.actif ? 'Désactiver ' : 'Activer ') + utilisateur.username
+                  "
+                  class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-wait disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+                >
+                  @if (utilisateurEnCours() === utilisateur.id) {
+                    Traitement…
+                  } @else if (utilisateur.actif) {
+                    Désactiver
+                  } @else {
+                    Activer
+                  }
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  @if (!erreur()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement() || utilisateurEnCours() !== null"
+      (pageChange)="chargerUtilisateurs($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

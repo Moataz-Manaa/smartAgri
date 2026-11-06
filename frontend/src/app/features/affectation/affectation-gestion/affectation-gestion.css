@@ -1,0 +1,22 @@
+.champ {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: white;
+  color: #0f172a;
+  font-size: 0.875rem;
+}
+.champ.w-auto {
+  width: auto;
+  max-width: 100%;
+}
+.champ:focus {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+}
+.champ.ng-invalid.ng-touched {
+  border-color: #b91c1c;
+}

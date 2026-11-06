@@ -1,0 +1,107 @@
+<section aria-labelledby="titre-varietes">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 id="titre-varietes" class="text-3xl font-bold text-slate-900">Variétés</h1>
+      <p class="mt-2 text-sm text-slate-600">
+        Consultez les variétés et leur culture de rattachement.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      @if (authService.possedeRole('ADMIN')) {
+        <a
+          routerLink="/varietes/nouvelle"
+          [queryParams]="{ cultureId: cultureId }"
+          class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
+          >Nouvelle variété</a
+        >
+      }
+    </div>
+  </div>
+  <div class="mb-5">
+    <label for="filtre-culture" class="mb-2 block text-sm font-medium text-slate-700"
+      >Culture</label
+    >
+    <select
+      id="filtre-culture"
+      [ngModel]="cultureId"
+      (ngModelChange)="changerFiltre($event)"
+      [disabled]="chargement()"
+      class="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 sm:max-w-sm focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >
+      <option [ngValue]="null">Toutes les cultures</option>
+      @for (culture of cultures(); track culture.id) {
+        <option [ngValue]="culture.id">{{ culture.nom }}</option>
+      }
+    </select>
+    @if (erreurCultures()) {
+      <p role="alert" class="mt-2 text-sm text-red-700">{{ erreurCultures() }}</p>
+    }
+  </div>
+  @if (chargement()) {
+    <p
+      role="status"
+      class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600"
+    >
+      Chargement des variétés…
+    </p>
+  } @else if (erreur()) {
+    <p role="alert" class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">
+      {{ erreur() }}
+    </p>
+  } @else if (varietes().length === 0) {
+    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+      <h2 class="text-lg font-semibold text-slate-900">Aucune variété pour cette sélection</h2>
+      <p class="mt-2 text-sm text-slate-600">L’administrateur peut compléter le catalogue.</p>
+    </div>
+  } @else {
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-left text-sm">
+        <caption class="sr-only">
+          Catalogue des variétés
+        </caption>
+        <thead class="border-b border-slate-200 bg-slate-100">
+          <tr>
+            <th scope="col" class="px-5 py-4">Nom</th>
+            <th scope="col" class="px-5 py-4">Culture</th>
+            <th scope="col" class="px-5 py-4">Description</th>
+            <th scope="col" class="px-5 py-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (variete of varietes(); track variete.id) {
+            <tr class="hover:bg-slate-50">
+              <td class="px-5 py-4 font-semibold text-slate-900">{{ variete.nom }}</td>
+              <td class="px-5 py-4 text-slate-600">{{ variete.cultureNom }}</td>
+              <td class="max-w-sm whitespace-pre-line break-words px-5 py-4 text-slate-600">
+                {{ variete.description || 'Aucune description' }}
+              </td>
+              <td class="whitespace-nowrap px-5 py-4">
+                @if (authService.possedeRole('ADMIN')) {
+                  <a
+                    [routerLink]="['/varietes', variete.id, 'modifier']"
+                    [attr.aria-label]="'Modifier ' + variete.nom"
+                    class="font-semibold text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                    >Modifier</a
+                  >
+                } @else {
+                  <span class="text-slate-500">Consultation</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  @if (!erreur()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement()"
+      (pageChange)="charger($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

@@ -1,0 +1,137 @@
+<section aria-labelledby="titre-plantations">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      @if (parcelleId === null) {
+        <h1 id="titre-plantations" class="text-3xl font-bold text-slate-900">Plantations</h1>
+      } @else {
+        <h2 id="titre-plantations" class="text-2xl font-bold text-slate-900">
+          Plantations de la parcelle
+        </h2>
+      }
+      <p class="mt-2 text-sm text-slate-600">
+        Une fiche de suivi pour chaque plantation et campagne.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      @if (authService.possedeRole('AGRICULTEUR')) {
+        <a
+          routerLink="/plantations/nouvelle"
+          [queryParams]="{ parcelleId: parcelleId }"
+          class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+          >Nouvelle plantation</a
+        >
+      }
+    </div>
+  </div>
+  <div class="mb-5 grid gap-4 sm:grid-cols-2">
+    <div>
+      <label for="plantation-campagne" class="mb-2 block text-sm font-medium text-slate-700"
+        >Campagne</label
+      >
+      <select
+        id="plantation-campagne"
+        [(ngModel)]="campagneId"
+        (ngModelChange)="charger(0)"
+        class="w-full rounded-lg border border-slate-300 bg-white p-3"
+      >
+        <option [ngValue]="null">Toutes les campagnes</option>
+        @for (campagne of campagnesDisponibles(); track campagne.id) {
+          <option [ngValue]="campagne.id">{{ campagne.nom }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="plantation-statut" class="mb-2 block text-sm font-medium text-slate-700"
+        >Statut</label
+      >
+      <select
+        id="plantation-statut"
+        [(ngModel)]="statut"
+        (ngModelChange)="charger(0)"
+        class="w-full rounded-lg border border-slate-300 bg-white p-3"
+      >
+        <option [ngValue]="null">Tous les statuts</option>
+        <option value="PLANIFIEE">Planifiée</option>
+        <option value="EN_COURS">En cours</option>
+        <option value="TERMINEE">Terminée</option>
+      </select>
+    </div>
+  </div>
+  @if (chargement()) {
+    <p role="status" class="rounded-xl bg-white p-8 text-center text-slate-600">
+      Chargement des plantations…
+    </p>
+  } @else if (erreur()) {
+    <p role="alert" class="rounded-xl bg-red-50 p-5 text-red-800">{{ erreur() }}</p>
+  } @else if (plantations().length === 0) {
+    <p
+      class="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600"
+    >
+      Aucune plantation pour cette sélection.
+    </p>
+  } @else {
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-left text-sm">
+        <caption class="sr-only">
+          Fiches de suivi des plantations
+        </caption>
+        <thead class="bg-slate-100">
+          <tr>
+            <th scope="col" class="p-4">Culture et variété</th>
+            <th scope="col" class="p-4">Parcelle</th>
+            <th scope="col" class="p-4">Campagne</th>
+            <th scope="col" class="p-4">Surface</th>
+            <th scope="col" class="p-4">Statut</th>
+            <th scope="col" class="p-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (plantation of plantations(); track plantation.id) {
+            <tr class="hover:bg-slate-50">
+              <td class="p-4">
+                <p class="font-semibold text-slate-900">{{ plantation.cultureNom }}</p>
+                <p class="mt-1 text-slate-500">{{ plantation.varieteNom }}</p>
+              </td>
+              <td class="p-4">{{ plantation.parcelleCode }} — {{ plantation.parcelleNom }}</td>
+              <td class="p-4">
+                {{ plantation.campagneNom }}
+                @if (plantation.campagneCloturee) {
+                  <span class="block text-xs text-slate-500">Campagne clôturée</span>
+                }
+              </td>
+              <td class="whitespace-nowrap p-4">{{ plantation.superficie }} ha</td>
+              <td class="p-4">{{ plantation.statut | statutPlantation }}</td>
+              <td class="whitespace-nowrap p-4">
+                <a
+                  [routerLink]="['/plantations', plantation.id]"
+                  [attr.aria-label]="'Consulter la plantation ' + plantation.id"
+                  class="mr-4 font-semibold text-emerald-700 hover:underline"
+                  >Consulter</a
+                >
+                @if (authService.possedeRole('AGRICULTEUR') && !plantation.campagneCloturee) {
+                  <a
+                    [routerLink]="['/plantations', plantation.id, 'modifier']"
+                    [attr.aria-label]="'Modifier la plantation ' + plantation.id"
+                    class="font-semibold text-emerald-700 hover:underline"
+                    >Modifier</a
+                  >
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  @if (!erreur()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement()"
+      (pageChange)="charger($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

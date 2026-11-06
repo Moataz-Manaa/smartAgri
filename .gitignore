@@ -1,0 +1,31 @@
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+
+# Dependencies, builds, and caches
+node_modules/
+.angular/
+target/
+dist/
+coverage/
+__pycache__/
+*.py[cod]
+*.log
+
+# Local editor, agent, and operating-system files
+.vscode/
+.idea/
+.agents/
+.codex/
+.DS_Store
+Thumbs.db
+
+# Preserve the original frontend repository locally
+/.frontend-git-backup/

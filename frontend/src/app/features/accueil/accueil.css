@@ -1,0 +1,40 @@
+.carte {
+  display: block;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: white;
+  padding: 1.5rem;
+}
+
+.carte:hover,
+.action:hover {
+  border-color: #10b981;
+}
+
+.carte:focus-visible,
+.action:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 3px;
+}
+
+.libelle {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.nombre {
+  margin-top: 0.75rem;
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 1.25rem;
+  color: #0f172a;
+}
