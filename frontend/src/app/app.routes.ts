@@ -19,6 +19,46 @@ import { UtilisateurListe } from './features/utilisateur/utilisateur-liste/utili
 import { UtilisateurFormulaire } from './features/utilisateur/utilisateur-formulaire/utilisateur-formulaire';
 
 export const routes: Routes = [
+  {
+    path: 'fertilisations/nouvelle',
+    loadComponent: chargerFormulaireFertilisation,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'fertilisations/:id/modifier',
+    loadComponent: chargerFormulaireFertilisation,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'traitements/nouvelle',
+    loadComponent: chargerFormulaireTraitement,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'traitements/:id/modifier',
+    loadComponent: chargerFormulaireTraitement,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'irrigations/nouvelle',
+    loadComponent: chargerFormulaireIrrigation,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'irrigations/:id/modifier',
+    loadComponent: chargerFormulaireIrrigation,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'observations/nouvelle',
+    loadComponent: chargerFormulaireObservation,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'observations/:id/modifier',
+    loadComponent: chargerFormulaireObservation,
+    canActivate: [agriculteurGuard],
+  },
   { path: 'plantations', loadComponent: chargerListePlantations, canActivate: [lectureGuard] },
   {
     path: 'plantations/nouvelle',
@@ -152,4 +192,28 @@ async function chargerDetailPlantation() {
 async function chargerDetailParcelle() {
   const composant = await import('./features/parcelle/parcelle-detail/parcelle-detail');
   return composant.ParcelleDetail;
+}
+
+async function chargerFormulaireObservation() {
+  const composant =
+    await import('./features/observation/observation-formulaire/observation-formulaire');
+  return composant.ObservationFormulaire;
+}
+
+async function chargerFormulaireIrrigation() {
+  const composant =
+    await import('./features/irrigation/irrigation-formulaire/irrigation-formulaire');
+  return composant.IrrigationFormulaire;
+}
+
+async function chargerFormulaireFertilisation() {
+  const composant =
+    await import('./features/fertilisation/fertilisation-formulaire/fertilisation-formulaire');
+  return composant.FertilisationFormulaire;
+}
+
+async function chargerFormulaireTraitement() {
+  const composant =
+    await import('./features/traitement/traitement-formulaire/traitement-formulaire');
+  return composant.TraitementFormulaire;
 }

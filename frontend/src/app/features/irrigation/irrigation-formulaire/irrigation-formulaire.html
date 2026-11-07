@@ -1,0 +1,131 @@
+<section class="mx-auto max-w-3xl">
+  @if (plantation(); as p) {
+    <a [routerLink]="['/plantations', p.id]" class="font-medium text-emerald-700 hover:underline"
+      >← Retour à la plantation</a
+    >
+  } @else {
+    <a routerLink="/plantations" class="font-medium text-emerald-700 hover:underline"
+      >← Retour aux plantations</a
+    >
+  }
+  <h1 class="mb-2 mt-6 text-3xl font-bold text-slate-900">
+    {{ id === null ? 'Enregistrer une irrigation' : 'Modifier l’irrigation' }}
+  </h1>
+  <p class="mb-6 text-sm text-slate-600">
+    Renseignez une opération effectuée sur le terrain. Les champs marqués d’un astérisque sont
+    obligatoires.
+  </p>
+  @if (chargement()) {
+    <p role="status">Chargement du formulaire…</p>
+  } @else if (echecChargement()) {
+    <p role="alert" class="rounded-xl bg-red-50 p-5 text-red-800">{{ erreur() }}</p>
+  } @else if (plantation(); as p) {
+    <div
+      class="mb-5 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-900"
+    >
+      <p class="font-semibold">{{ p.cultureNom }} — {{ p.varieteNom }}</p>
+      <p class="mt-1">{{ p.parcelleCode }} · {{ p.campagneNom }}</p>
+    </div>
+    @if (p.campagneCloturee) {
+      <p role="status" class="mb-5 rounded-xl bg-amber-50 p-4 text-amber-900">
+        Campagne clôturée : cette irrigation est en lecture seule.
+      </p>
+    }
+    <form
+      #formulaire="ngForm"
+      (ngSubmit)="enregistrer(formulaire)"
+      class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      novalidate
+    >
+      <fieldset
+        [disabled]="enregistrement() || p.campagneCloturee"
+        class="grid min-w-0 gap-6 sm:grid-cols-2"
+      >
+        <legend class="sr-only">Informations de l’irrigation</legend>
+        <div class="sm:col-span-2">
+          <label for="date-irrigation" class="libelle">Date de l’irrigation *</label>
+          <input
+            id="date-irrigation"
+            name="dateIrrigation"
+            type="date"
+            [(ngModel)]="dateIrrigation"
+            required
+            [max]="aujourdhui"
+            [min]="p.datePlantation"
+            class="champ"
+          />
+          <p class="mt-2 text-sm text-slate-500">
+            La date doit appartenir à la campagne et ne pas être future.
+          </p>
+        </div>
+        <div>
+          <label for="volume-irrigation" class="libelle">Volume d’eau utilisé *</label>
+          <input
+            id="volume-irrigation"
+            name="volume"
+            type="number"
+            [(ngModel)]="volume"
+            #volumeChamp="ngModel"
+            required
+            min="0.001"
+            max="999999999999.999"
+            step="0.001"
+            class="champ"
+          />
+          @if (volumeChamp.invalid && (volumeChamp.touched || formulaire.submitted)) {
+            <p class="mt-2 text-sm text-red-700">
+              Indiquez un volume strictement positif, avec au plus 3 décimales.
+            </p>
+          }
+        </div>
+        <div>
+          <label for="unite-irrigation" class="libelle">Unité *</label>
+          <select id="unite-irrigation" name="unite" [(ngModel)]="unite" required class="champ">
+            <option value="LITRE">Litres (L)</option>
+            <option value="METRE_CUBE">Mètres cubes (m³)</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="commentaire-irrigation" class="libelle">Commentaire</label>
+          <textarea
+            id="commentaire-irrigation"
+            name="commentaire"
+            [(ngModel)]="commentaire"
+            maxlength="255"
+            rows="4"
+            placeholder="Exemple : irrigation au goutte-à-goutte en début de matinée."
+            class="champ"
+          ></textarea>
+        </div>
+      </fieldset>
+      <p class="mt-5 text-sm text-slate-500">
+        {{
+          auteur
+            ? 'Saisie initiale par ' + auteur
+            : 'Votre identité sera associée automatiquement à cette opération.'
+        }}
+      </p>
+      @if (erreur()) {
+        <p role="alert" class="mt-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+          {{ erreur() }}
+        </p>
+      }
+      <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-6">
+        <a
+          [routerLink]="['/plantations', p.id]"
+          class="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >Annuler</a
+        >
+        @if (!p.campagneCloturee) {
+          <button
+            type="submit"
+            [disabled]="enregistrement()"
+            class="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+          >
+            {{ enregistrement() ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+        }
+      </div>
+    </form>
+  }
+</section>

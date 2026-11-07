@@ -1,3 +1,6 @@
+import { TraitementService } from '../../core/services/traitement';
+import { FertilisationService } from '../../core/services/fertilisation';
+import { IrrigationService } from '../../core/services/irrigation';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -7,6 +10,7 @@ import { vi } from 'vitest';
 import { routes } from '../../app.routes';
 import { AuthService } from '../../core/services/auth';
 import { PlantationService } from '../../core/services/plantation';
+import { ObservationService } from '../../core/services/observation';
 import { ParcelleService } from '../../core/services/parcelle';
 import { CampagneService } from '../../core/services/campagne';
 import { CultureService } from '../../core/services/culture';
@@ -59,10 +63,39 @@ describe('Plantations par campagne', () => {
       providers: [
         provideRouter(routes),
         {
+          provide: TraitementService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+          },
+        },
+        {
+          provide: FertilisationService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+          },
+        },
+        {
+          provide: IrrigationService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+            consulterTotal: () => of({ volumeTotalMetresCubes: 0 }),
+          },
+        },
+        {
           provide: AuthService,
           useValue: { estConnecte: () => true, possedeRole: (valeur: string) => role === valeur },
         },
         { provide: PlantationService, useValue: service },
+        {
+          provide: ObservationService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+          },
+        },
         {
           provide: ParcelleService,
           useValue: {

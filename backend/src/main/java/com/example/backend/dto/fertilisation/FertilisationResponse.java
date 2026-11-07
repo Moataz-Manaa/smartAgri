@@ -1,0 +1,25 @@
+package com.example.backend.dto.fertilisation;
+
+import lombok.Getter;
+import lombok.Setter;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import com.example.backend.enums.UniteQuantite;
+
+@Getter
+@Setter
+public class FertilisationResponse {
+    private Long id;
+    private Long plantationId;
+    private LocalDate dateFertilisation;
+    private String nomProduit;
+    private BigDecimal quantite;
+    private UniteQuantite unite;
+    private String methodeApplication;
+    private String commentaire;
+    private String typeEngrais;
+
+    private String auteurNom;
+    private String auteurPrenom;
+    private boolean campagneCloturee;
+}

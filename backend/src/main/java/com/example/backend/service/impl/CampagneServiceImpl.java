@@ -14,6 +14,10 @@ import com.example.backend.repository.CampagneRepository;
 import com.example.backend.service.AutorisationService;
 import com.example.backend.service.CampagneService;
 import com.example.backend.repository.PlantationRepository;
+import com.example.backend.repository.ObservationRepository;
+import com.example.backend.repository.IrrigationRepository;
+import com.example.backend.repository.FertilisationRepository;
+import com.example.backend.repository.TraitementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -35,6 +39,10 @@ import java.util.Optional;
 public class CampagneServiceImpl implements CampagneService {
     private final CampagneRepository campagneRepository;
     private final PlantationRepository plantationRepository;
+    private final ObservationRepository observationRepository;
+    private final IrrigationRepository irrigationRepository;
+    private final FertilisationRepository fertilisationRepository;
+    private final TraitementRepository traitementRepository;
     private final AutorisationService autorisationService;
     private final ParcelleRepository parcelleRepository;
     private final AffectationRepository affectationRepository;
@@ -81,6 +89,23 @@ public class CampagneServiceImpl implements CampagneService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Ces dates sont incompatibles avec les plantations de la campagne");
             }
+        }
+        if (observationRepository.existsByPlantation_Campagne_IdAndDateObservationBefore(id, request.getDateDebut())
+                || observationRepository.existsByPlantation_Campagne_IdAndDateObservationAfter(id, request.getDateFin())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ces dates excluent une observation existante de la campagne");
+        }
+        if (irrigationRepository.existsByPlantation_Campagne_IdAndDateIrrigationBefore(id, request.getDateDebut())
+                || irrigationRepository.existsByPlantation_Campagne_IdAndDateIrrigationAfter(id, request.getDateFin())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ces dates excluent une irrigation existante de la campagne");
+        }
+        if (fertilisationRepository.existsByPlantation_Campagne_IdAndDateFertilisationBefore(id, request.getDateDebut())
+                || fertilisationRepository.existsByPlantation_Campagne_IdAndDateFertilisationAfter(id, request.getDateFin())
+                || traitementRepository.existsByPlantation_Campagne_IdAndDateTraitementBefore(id, request.getDateDebut())
+                || traitementRepository.existsByPlantation_Campagne_IdAndDateTraitementAfter(id, request.getDateFin())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ces dates excluent une fertilisation ou un traitement existant de la campagne");
         }
         campagne.setNom(nom);
         campagne.setNomNormalise(nomNormalise);

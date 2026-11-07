@@ -58,8 +58,19 @@ class PlantationTests {
     private long varieteId;
     private long campagneId;
 
+    @Autowired com.example.backend.repository.ObservationRepository observations;
+
+    @Autowired com.example.backend.repository.IrrigationRepository irrigations;
+
+    @Autowired com.example.backend.repository.FertilisationRepository fertilisations;
+    @Autowired com.example.backend.repository.TraitementRepository traitements;
+
     @BeforeEach
     void preparer() throws Exception {
+        traitements.deleteAll();
+        fertilisations.deleteAll();
+        irrigations.deleteAll();
+        observations.deleteAll();
         plantations.deleteAll();
         campagnes.deleteAll();
         varietes.deleteAll();

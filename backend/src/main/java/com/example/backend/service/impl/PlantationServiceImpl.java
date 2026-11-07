@@ -30,6 +30,10 @@ public class PlantationServiceImpl implements PlantationService {
     private final ParcelleRepository parcelleRepository;
     private final VarieteRepository varieteRepository;
     private final AutorisationService autorisationService;
+    private final ObservationRepository observationRepository;
+    private final IrrigationRepository irrigationRepository;
+    private final FertilisationRepository fertilisationRepository;
+    private final TraitementRepository traitementRepository;
 
     @Override
     public PlantationResponse creer(PlantationRequest request) {
@@ -58,6 +62,34 @@ public class PlantationServiceImpl implements PlantationService {
         Parcelle parcelle = rechercherParcelle(request.getParcelleId());
         Variete variete = rechercherVariete(request.getVarieteId());
         verifierDonnees(request, campagne, parcelle);
+        if (observationRepository.existsByPlantation_IdAndDateObservationBefore(id, request.getDatePlantation())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La plantation ne peut pas commencer après une observation existante");
+        }
+        if (!plantation.getVariete().getId().equals(request.getVarieteId())
+                && observationRepository.existsByPlantation_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La variété ne peut pas changer après l'enregistrement d'observations");
+        }
+        if (irrigationRepository.existsByPlantation_IdAndDateIrrigationBefore(id, request.getDatePlantation())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La plantation ne peut pas commencer après une irrigation existante");
+        }
+        if (!plantation.getVariete().getId().equals(request.getVarieteId())
+                && irrigationRepository.existsByPlantation_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La variété ne peut pas changer après l'enregistrement d'irrigations");
+        }
+        if (fertilisationRepository.existsByPlantation_IdAndDateFertilisationBefore(id, request.getDatePlantation())
+                || traitementRepository.existsByPlantation_IdAndDateTraitementBefore(id, request.getDatePlantation())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La plantation ne peut pas commencer après une fertilisation ou un traitement existant");
+        }
+        if (!plantation.getVariete().getId().equals(request.getVarieteId())
+                && (fertilisationRepository.existsByPlantation_Id(id) || traitementRepository.existsByPlantation_Id(id))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La variété ne peut pas changer après l'enregistrement d'opérations agricoles");
+        }
         plantation.setVariete(variete);
         appliquerDonnees(plantation, request);
         return convertirEnResponse(enregistrer(plantation));

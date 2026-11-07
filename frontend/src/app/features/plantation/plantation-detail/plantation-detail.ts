@@ -5,10 +5,22 @@ import { PlantationService } from '../../../core/services/plantation';
 import { AuthService } from '../../../core/services/auth';
 import { PlantationResponse } from '../../../core/models/plantation';
 import { StatutPlantationPipe } from '../../../shared/pipes/statut-plantation';
+import { ObservationListe } from '../../observation/observation-liste/observation-liste';
+import { IrrigationListe } from '../../irrigation/irrigation-liste/irrigation-liste';
+import { FertilisationListe } from '../../fertilisation/fertilisation-liste/fertilisation-liste';
+import { TraitementListe } from '../../traitement/traitement-liste/traitement-liste';
 
 @Component({
   selector: 'app-plantation-detail',
-  imports: [RouterLink, DatePipe, StatutPlantationPipe],
+  imports: [
+    RouterLink,
+    DatePipe,
+    StatutPlantationPipe,
+    ObservationListe,
+    IrrigationListe,
+    FertilisationListe,
+    TraitementListe,
+  ],
   templateUrl: './plantation-detail.html',
 })
 export class PlantationDetail implements OnInit {

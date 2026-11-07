@@ -6,6 +6,13 @@ Permettre à un agriculteur de suivre les plantations de ses parcelles, depuis l
 jusqu'aux récoltes, et à un agronome affecté de consulter leur historique.
 Le sprint reprend les conventions de code du sprint 1.
 
+## Avancement
+
+Au **7 novembre 2026 : 72 %**, soit **26 tâches terminées sur 36** dans le plan ci-dessous.
+Le calcul utilise les cases cochées, arrondi au pourcentage entier ; il ne mesure pas le temps de développement.
+Ce bilan sera actualisé et communiqué à chaque livraison, conformément à la demande de l'utilisateur.
+Les validations visuelles non confirmées restent à faire.
+
 ## Conventions conservées
 
 - Spring Boot avec Lombok, repositories et services sous forme d'interfaces et d'implémentations.
@@ -61,19 +68,19 @@ s'appliqueront aux plantations et aux opérations agricoles.
 
 ### Étape 5 — Observations agricoles
 
-- [ ] Enregistrer les observations avec leur date, leur plantation et leur auteur.
-- [ ] Réaliser les écrans d'ajout, de modification et de consultation.
-- [ ] Vérifier les accès de l'agriculteur et de l'agronome selon leurs affectations.
+- [x] Enregistrer les observations avec leur date, leur plantation et leur auteur.
+- [x] Réaliser les écrans d'ajout, de modification et de consultation.
+- [x] Vérifier les accès de l'agriculteur et de l'agronome selon leurs affectations.
 
 ### Étape 6 — Irrigation
 
-- [ ] Enregistrer les opérations effectuées avec date, volume, unité et commentaire.
-- [ ] Ajouter la consultation, la modification et le total par plantation.
+- [x] Enregistrer les opérations effectuées avec date, volume, unité et commentaire.
+- [x] Ajouter la consultation, la modification et le total par plantation.
 
 ### Étape 7 — Fertilisation et traitements
 
-- [ ] Enregistrer les produits, dates, quantités, unités et informations propres à chaque opération.
-- [ ] Réaliser les formulaires et l'historique par plantation.
+- [x] Enregistrer les produits, dates, quantités, unités et informations propres à chaque opération.
+- [x] Réaliser les formulaires et l'historique par plantation.
 
 ### Étape 8 — Récoltes
 
@@ -370,4 +377,239 @@ Les écrans ne sont pas encore validés visuellement dans le navigateur.
 8. Retirer l'affectation d'un agriculteur : vérifier la disparition des fiches de cette parcelle et le refus par URL directe.
 9. Vérifier les formulaires, le tableau défilant et les filtres sur mobile.
 
-La prochaine étape de développement est l'enregistrement des observations agricoles.
+## Quatrième livraison — Observations agricoles
+
+Livraison du **7 novembre 2026**. Les conventions Spring Boot, Lombok, DTO par domaine,
+interfaces de service et architecture Angular existantes sont conservées.
+
+### Données et règles
+
+Une observation contient sa plantation, une date obligatoire, une description obligatoire
+de 2000 caractères maximum et son auteur. Le backend détermine l'auteur à partir du compte connecté ;
+le formulaire ne permet pas de le choisir. L'identité de l'auteur initial est conservée pendant les modifications.
+Les nom et prénom affichés proviennent de son profil métier actuel.
+
+- Seuls les agriculteurs actuellement affectés à la parcelle peuvent créer ou modifier ses observations.
+  Comme pour les plantations, les agriculteurs partageant une parcelle peuvent intervenir sur ses données.
+- L'agronome affecté consulte les observations ; l'administrateur peut consulter l'ensemble.
+- La date appartient à la campagne, ne précède pas la plantation et n'est pas future.
+- Une observation enregistrée reste rattachée à sa plantation initiale.
+- Une campagne clôturée conserve les observations en lecture seule.
+- Le retrait d'affectation bloque immédiatement la consultation, les totaux et la modification côté API.
+- Une nouvelle date de plantation ou de campagne ne peut pas exclure une observation existante.
+  La variété d'une plantation ayant des observations ne peut plus être remplacée.
+
+Les écritures partagent le verrou de campagne existant avec la clôture et la modification des plantations.
+Une version interne détecte aussi les modifications concurrentes d'une observation.
+Hibernate crée la table `observations`, sans migration et sans suppression en cascade.
+
+### API et interface
+
+| Opération | API |
+| --- | --- |
+| Liste paginée d'une plantation | GET /api/observations/pagination?plantationId={id} |
+| Consultation | GET /api/observations/{id} |
+| Création | POST /api/observations |
+| Modification | PUT /api/observations/{id} |
+
+La pagination reprend `page` et `taille`, avec tri par date décroissante puis identifiant décroissant.
+L'accès à la plantation est vérifié avant de charger ou compter les observations.
+Le détail d'une plantation affiche les observations complètes avec date, auteur et pagination.
+L'agriculteur peut ouvrir **Ajouter une observation**, puis revient à sa plantation après enregistrement.
+Les routes des formulaires sont `/observations/nouvelle?plantationId={id}` et `/observations/{id}/modifier`.
+Les écrans reprennent les cartes, couleurs et champs existants. Aucun bouton Actualiser n'est ajouté.
+
+### Vérifications
+
+| Vérification | Résultat |
+| --- | --- |
+| Tests backend habituels | 63 réussis, dont 8 nouveaux tests des observations |
+| Tests Angular | 73 réussis, dont 9 nouveaux tests des observations |
+| Recette PostgreSQL et Keycloak réels | 18 réussis, dont le parcours des observations avec de vrais JWT |
+| Compilations backend et Angular | Réussies |
+| Chargement initial Angular | 493,57 kB, budget existant respecté |
+
+Les tests couvrent l'auteur non falsifiable et conservé après modification par un autre agriculteur,
+les trois rôles, les dates, les descriptions invalides, la clôture, la pagination,
+le retrait d'affectation, la cohérence avec les données parentes, les formulaires et la double soumission.
+Les conteneurs temporaires de recette ont été supprimés après les tests.
+La présentation visuelle sur ordinateur et mobile reste à confirmer.
+
+### Recette manuelle
+
+1. Redémarrer le backend et ouvrir Angular avec un agriculteur affecté.
+2. Ouvrir une plantation d'une campagne ouverte contenant la date de l'observation.
+3. Dans **Observations agricoles**, ajouter une observation, par exemple « Feuilles jaunissantes sur trois arbres ».
+4. Vérifier le retour à la plantation, la date, l'auteur et le texte, puis modifier le texte.
+5. Essayer une description vide, une date future ou hors campagne : l'enregistrement doit être refusé.
+6. Comme agronome affecté, vérifier la lecture sans action d'ajout ou de modification.
+7. Clôturer la campagne comme administrateur, puis vérifier la lecture seule des observations.
+8. Retirer l'affectation d'un agriculteur et vérifier le refus d'accès, y compris par URL directe.
+9. Vérifier les champs, les cartes et la pagination sur mobile.
+
+## Cinquième livraison — Irrigation
+
+Livraison du **7 novembre 2026**. Ce module enregistre les opérations réalisées sur le terrain.
+Les prédictions de besoins en eau restent prévues dans le sprint consacré au Machine Learning.
+
+### Données et règles
+
+Chaque irrigation référence une plantation et conserve une date obligatoire, un volume positif,
+une unité obligatoire, un commentaire facultatif de 255 caractères maximum et l'auteur initial.
+Les unités proposées sont `LITRE` et `METRE_CUBE`.
+Le volume accepte au plus 12 chiffres avant la virgule et 3 décimales.
+Le backend utilise BigDecimal pour convertir et additionner les volumes sans arrondi binaire.
+La valeur saisie et son unité sont conservées ; une valeur convertie en m³ permet le calcul du total.
+
+- L'agriculteur actuellement affecté à la parcelle crée et modifie les opérations.
+- L'agronome affecté consulte les opérations et le total ; l'administrateur consulte l'ensemble.
+- Le backend détermine l'auteur à partir du compte connecté et conserve cette identité pendant les modifications.
+- La date appartient à la campagne, ne précède pas la plantation et ne peut pas être future.
+- Une opération enregistrée ne peut pas être déplacée vers une autre plantation.
+- La clôture d'une campagne bloque les créations et modifications, tout en conservant la consultation.
+- Le retrait d'affectation bloque aussi l'accès au total, aux pages et au détail d'une opération.
+- Une modification des dates de plantation ou de campagne ne peut pas invalider une irrigation existante.
+  La variété ne peut plus être remplacée lorsqu'une irrigation est enregistrée sur cette plantation.
+
+Les écritures utilisent le verrou de campagne existant et une version interne de l'opération.
+Hibernate crée la table `irrigations`, sans migration ni suppression en cascade.
+
+### Total et interface
+
+Le total concerne toutes les irrigations de cette fiche de plantation, donc de sa campagne,
+et non uniquement la page affichée. Il est toujours exprimé en m³ :
+**500 litres + 2 m³ = 2,5 m³**. Une modification du volume ou de l'unité recalcule ce total.
+Une plantation sans irrigation affiche 0 m³.
+
+Le détail de la plantation propose **Enregistrer une irrigation**, l'historique paginé et le total.
+Les opérations indiquent leur date, leur volume dans l'unité saisie, leur auteur et leur commentaire.
+Le formulaire reprend les champs et les couleurs existants. Aucun bouton Actualiser n'est ajouté.
+Une erreur de chargement ou un refus d'accès efface les données et le total précédemment affichés.
+
+| Opération | API |
+| --- | --- |
+| Liste paginée | GET /api/irrigations/pagination?plantationId={id} |
+| Total autorisé de la plantation | GET /api/irrigations/total?plantationId={id} |
+| Consultation | GET /api/irrigations/{id} |
+| Création | POST /api/irrigations |
+| Modification | PUT /api/irrigations/{id} |
+
+La pagination reprend `page` et `taille`, avec tri par date décroissante puis identifiant décroissant.
+Les routes des formulaires sont `/irrigations/nouvelle?plantationId={id}` et `/irrigations/{id}/modifier`.
+Le backend vérifie l'accès à la plantation avant toute consultation ou agrégation.
+
+### Vérifications
+
+| Vérification | Résultat |
+| --- | --- |
+| Tests backend habituels | 73 réussis, dont 10 nouveaux tests d'irrigation |
+| Tests Angular | 83 réussis, dont 10 nouveaux tests d'irrigation |
+| Recette PostgreSQL et Keycloak réels | 19 réussis, dont le parcours d'irrigation avec conversion des unités et contrôles d'accès |
+| Compilations backend et Angular | Réussies |
+| Chargement initial Angular | 497,65 kB, budget existant respecté |
+
+Les tests couvrent les volumes et unités invalides, les dates, la conversion des unités,
+la précision décimale, le total indépendant des pages, le recalcul après correction,
+l'auteur, les trois rôles, la clôture, le retrait d'affectation, la cohérence des données parentes,
+les formulaires, l'annulation des anciennes requêtes et les doubles soumissions.
+La recette réelle utilise des conteneurs indépendants, supprimés après les tests.
+La présentation visuelle sur ordinateur et mobile reste à confirmer.
+
+### Recette manuelle
+
+1. Redémarrer le backend et ouvrir une plantation d'une campagne ouverte avec un agriculteur affecté.
+2. Dans **Irrigation**, saisir une première opération de 500 litres à une date valide.
+3. Ajouter une deuxième opération de 2 m³ : le total doit afficher 2,5 m³.
+4. Modifier la première opération en 1 m³ : le total doit afficher 3 m³.
+5. Vérifier le total en changeant de page et contrôler la date, le volume, l'unité et le commentaire.
+6. Essayer un volume nul ou négatif, une unité invalide via l'API et une date future : les écritures sont refusées.
+7. Comme agronome affecté, vérifier la consultation sans ajout ni modification.
+8. Clôturer la campagne, puis vérifier la lecture seule. Retirer une affectation et vérifier le refus du total et des opérations.
+9. Vérifier les cartes, les champs et la pagination sur mobile.
+
+## Sixième livraison — Fertilisation et traitements
+
+Livraison du **7 novembre 2026**. Les deux modules enregistrent les opérations effectuées,
+avec les mêmes conventions de code, contrôles d'affectation et écrans par plantation que les observations et l'irrigation.
+
+### Données
+
+| Champ | Fertilisation | Traitement |
+| --- | --- | --- |
+| Plantation et date | Obligatoires | Obligatoires |
+| Produit utilisé | Obligatoire, 100 caractères maximum | Obligatoire, 100 caractères maximum |
+| Quantité totale utilisée | Positive, 12 chiffres entiers et 3 décimales maximum | Même règle |
+| Unité | g, kg, mL ou L | g, kg, mL ou L |
+| Information spécifique | Type d'engrais facultatif, 100 caractères maximum | Cible obligatoire, 150 caractères maximum |
+| Méthode d'application | Facultative, 100 caractères maximum | Même règle |
+| Commentaire | Facultatif, 255 caractères maximum | Même règle |
+| Auteur | Déterminé par le backend | Déterminé par le backend |
+
+Le produit est saisi en texte libre dans chaque opération. La quantité décrit le produit réellement utilisé,
+avec son unité explicite. Le formulaire n'ajoute pas de calcul de dose.
+Les opérations gardent leur quantité et leur unité d'origine ; aucun total commun à des produits différents n'est calculé.
+Les tables `fertilisations` et `traitements` sont créées par Hibernate, sans migration ni suppression en cascade.
+Les entités utilisent Lombok et une version interne ; les DTO restent regroupés par domaine,
+et chaque service conserve son interface et sa classe d'implémentation.
+
+### Droits et cohérence
+
+- Les agriculteurs actuellement affectés à la parcelle peuvent ajouter et modifier les opérations.
+- L'agronome affecté consulte l'historique ; l'administrateur peut consulter l'ensemble.
+- L'auteur initial est déterminé côté backend et reste identique après modification.
+- La date appartient à la campagne, ne précède pas la plantation et n'est pas future.
+- La plantation d'une opération enregistrée ne peut pas être remplacée.
+- Les campagnes clôturées conservent leurs opérations en lecture seule.
+- Le retrait d'affectation bloque le détail, la pagination et la modification dans l'API.
+- Les changements de dates des campagnes ou plantations ne peuvent pas invalider les opérations existantes.
+  La variété d'une plantation ayant des fertilisations ou traitements ne peut plus être remplacée.
+
+Les écritures partagent le verrou de campagne avec la clôture et les modifications des données parentes.
+
+### API et interface
+
+| Opération | Fertilisations | Traitements |
+| --- | --- | --- |
+| Liste paginée | GET /api/fertilisations/pagination?plantationId={id} | GET /api/traitements/pagination?plantationId={id} |
+| Consultation | GET /api/fertilisations/{id} | GET /api/traitements/{id} |
+| Création | POST /api/fertilisations | POST /api/traitements |
+| Modification | PUT /api/fertilisations/{id} | PUT /api/traitements/{id} |
+
+Les listes reprennent `page` et `taille`, avec tri par date puis identifiant décroissants.
+Le détail d'une plantation affiche les deux historiques avec leurs informations complètes et leur pagination.
+Les agriculteurs disposent des liens **Enregistrer une fertilisation** et **Enregistrer un traitement**.
+Les routes des formulaires sont `/fertilisations/nouvelle?plantationId={id}`,
+`/fertilisations/{id}/modifier`, `/traitements/nouvelle?plantationId={id}` et `/traitements/{id}/modifier`.
+Les écrans sont chargés à leur ouverture et reprennent les styles existants.
+Un pipe partagé affiche les unités. Aucun bouton Actualiser n'est ajouté.
+
+### Vérifications
+
+| Vérification | Résultat |
+| --- | --- |
+| Tests backend habituels | 91 réussis, dont 18 nouveaux tests pour ces deux modules |
+| Tests Angular | 102 réussis, dont 19 nouveaux tests pour ces deux modules |
+| Recette PostgreSQL et Keycloak réels | 21 réussis, dont les deux parcours avec des JWT réels |
+| Compilations backend et Angular | Réussies |
+| Chargement initial Angular | 498,12 kB, budget existant respecté |
+
+Les tests couvrent la création et la modification, l'auteur non falsifiable et conservé,
+les champs obligatoires, la cible d'un traitement, les quantités et unités invalides,
+les limites des textes, les dates, les trois rôles, la clôture, la pagination,
+le retrait d'affectation, la cohérence des parents et les doubles soumissions.
+Les conteneurs temporaires de recette ont été supprimés après les tests.
+La présentation visuelle sur ordinateur et mobile reste à confirmer.
+
+### Recette manuelle
+
+1. Redémarrer le backend et ouvrir une plantation d'une campagne ouverte avec un agriculteur affecté.
+2. Dans **Fertilisation**, enregistrer une opération avec un nom de produit et des valeurs fictives de test.
+3. Vérifier le produit, la date, la quantité, l'unité et l'auteur, puis modifier l'opération.
+4. Dans **Traitements**, enregistrer une opération en précisant aussi sa cible.
+5. Vérifier le refus d'une cible vide, d'un produit vide, d'une quantité nulle ou négative et d'une date future.
+6. Vérifier les listes et leur pagination, puis la consultation sans modification comme agronome affecté.
+7. Clôturer la campagne, puis vérifier la lecture seule, y compris en ouvrant directement une URL de modification.
+8. Retirer une affectation et vérifier le refus de consultation et de modification de ces opérations.
+9. Vérifier les champs, les cartes et la pagination sur mobile.
+
+La prochaine étape est **l'étape 8 — Enregistrement et suivi des récoltes**.

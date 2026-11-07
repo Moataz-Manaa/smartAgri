@@ -128,6 +128,14 @@ Les tests couvrent :
 17. Les plantations du sprint 2 : création et modification par un agriculteur affecté,
     culture déduite de la variété, consultation par l'agronome, pagination PostgreSQL,
     refus de saisie par l'agronome, clôture en lecture seule et retrait immédiat d'accès.
+18. Les observations agricoles : auteur déterminé côté backend, création et modification par l'agriculteur,
+    consultation par l'agronome, pagination, clôture en lecture seule et refus d'accès après retrait d'affectation.
+19. Les irrigations : volume et unité conservés, conversion litres/m³, calcul du total avec PostgreSQL,
+    recalcul après modification, auteur, lecture par l'agronome, clôture et refus du total après retrait d'affectation.
+20. Les fertilisations : enregistrement et correction des produits et quantités, auteur déterminé côté backend,
+    consultation par l'agronome, pagination, clôture et retrait d'accès.
+21. Les traitements : produit, cible et quantité conservés avec PostgreSQL, correction par l'agriculteur,
+    consultation par l'agronome, clôture et refus d'accès après retrait d'affectation.
 
 Les refus SQL sont déclenchés par une contrainte ajoutée uniquement dans la base jetable.
 Un relais HTTP local provoque certaines réponses d'erreur ciblées avant de transmettre les autres appels au vrai Keycloak.
@@ -139,6 +147,6 @@ Les tests optionnels sont désactivés lors d'un `mvn test` habituel.
 Les deux conteneurs et leur stockage sont supprimés en fin de recette, y compris en cas d'échec.
 Le rapport Maven est conservé dans `backend/target/recette-reelle.log`.
 
-Résultat du 26 octobre 2026 : **17 tests réussis**, sans échec ni test ignoré.
+Résultat du 7 novembre 2026 : **21 tests réussis**, sans échec ni test ignoré.
 Les contrôles dans le navigateur font l'objet d'une validation globale déclarée par l'utilisateur,
 consignée séparément des tests automatisés dans [le guide final](../RECETTE_SPRINT_1.md).

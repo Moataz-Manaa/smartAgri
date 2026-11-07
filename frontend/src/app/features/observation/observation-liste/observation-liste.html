@@ -1,0 +1,72 @@
+<section aria-labelledby="titre-observations">
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h2 id="titre-observations" class="text-2xl font-bold text-slate-900">
+        Observations agricoles
+      </h2>
+      <p class="mt-2 text-sm text-slate-600">
+        L’historique des observations de cette plantation, des plus récentes aux plus anciennes.
+      </p>
+    </div>
+    @if (authService.possedeRole('AGRICULTEUR') && !cloturee && !erreur()) {
+      <a
+        routerLink="/observations/nouvelle"
+        [queryParams]="{ plantationId: plantationId }"
+        class="rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
+        >Ajouter une observation</a
+      >
+    }
+  </div>
+  @if (chargement()) {
+    <p role="status" class="rounded-xl bg-white p-6 text-slate-600">Chargement des observations…</p>
+  } @else if (erreur()) {
+    <p role="alert" class="rounded-xl bg-red-50 p-5 text-red-800">{{ erreur() }}</p>
+  } @else if (observations().length === 0) {
+    <p
+      class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600"
+    >
+      Aucune observation pour cette plantation.
+    </p>
+  } @else {
+    <div class="space-y-4">
+      @for (observation of observations(); track observation.id) {
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-semibold text-slate-900">
+                {{ observation.dateObservation | date: 'dd/MM/yyyy' }}
+              </h3>
+              <p class="mt-1 text-sm text-slate-500">
+                Saisie par {{ observation.auteurPrenom }} {{ observation.auteurNom }}
+              </p>
+            </div>
+            @if (
+              authService.possedeRole('AGRICULTEUR') && !cloturee && !observation.campagneCloturee
+            ) {
+              <a
+                [routerLink]="['/observations', observation.id, 'modifier']"
+                [attr.aria-label]="'Modifier l’observation du ' + observation.dateObservation"
+                class="text-sm font-semibold text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                >Modifier</a
+              >
+            }
+          </div>
+          <p class="whitespace-pre-line break-words leading-relaxed text-slate-700">
+            {{ observation.description }}
+          </p>
+        </article>
+      }
+    </div>
+  }
+  @if (!erreur()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement()"
+      (pageChange)="charger($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

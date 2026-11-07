@@ -78,5 +78,17 @@
         <dd class="mt-1 whitespace-pre-line">{{ p.commentaire || 'Aucun commentaire' }}</dd>
       </div>
     </dl>
+    <div class="mt-10">
+      <app-observation-liste [plantationId]="p.id" [cloturee]="p.campagneCloturee" />
+    </div>
+    <div class="mt-10">
+      <app-irrigation-liste [plantationId]="p.id" [cloturee]="p.campagneCloturee" />
+    </div>
+    <div class="mt-10">
+      <app-fertilisation-liste [plantationId]="p.id" [cloturee]="p.campagneCloturee" />
+    </div>
+    <div class="mt-10">
+      <app-traitement-liste [plantationId]="p.id" [cloturee]="p.campagneCloturee" />
+    </div>
   }
 </section>

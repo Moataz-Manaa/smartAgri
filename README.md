@@ -328,15 +328,15 @@ ng serve
 
 Ouvrir `http://localhost:4200` et se connecter.
 
-## Vérifications du 26 octobre 2026
+## Vérifications — mise à jour du 7 novembre 2026
 
 | Vérification | Résultat |
 | --- | --- |
-| Compilation et tests backend | 55 tests réussis, incluant le catalogue, les campagnes et les plantations du sprint 2 |
-| Recette API avec Keycloak et PostgreSQL réels | 17 tests réussis dans deux conteneurs temporaires : comptes, trois rôles, affectations, sessions, catalogue, campagnes et plantations |
-| Tests Angular | 64 tests réussis, incluant le catalogue, les campagnes et les plantations du sprint 2 |
+| Compilation et tests backend | 91 tests réussis, incluant les fertilisations et traitements du sprint 2 |
+| Recette API avec Keycloak et PostgreSQL réels | 21 tests réussis dans deux conteneurs temporaires, incluant les nouveaux modules et leurs autorisations |
+| Tests Angular | 102 tests réussis, incluant les formulaires et les historiques des fertilisations et traitements |
 | Compilation Angular de production | Réussie |
-| Réimport du realm Keycloak dans un conteneur neuf | Réussi : rôles, Angular, PKCE, audience, secret par variable et permissions du compte technique vérifiés |
+| Réimport du realm Keycloak dans un conteneur neuf | Réussi le 26 octobre 2026 : rôles, Angular, PKCE, audience, secret par variable et permissions du compte technique vérifiés |
 
 Les tests backend exécutent les contrôleurs, services et repositories avec une base H2 temporaire.
 Le fournisseur de comptes Keycloak est simulé pour les tests d'autorisation.

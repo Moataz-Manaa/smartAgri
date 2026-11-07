@@ -109,6 +109,10 @@ class RecetteKeycloakTests {
     @BeforeEach
     void preparerCas() {
         relais.reinitialiser();
+        jdbc.update("delete from traitements");
+        jdbc.update("delete from fertilisations");
+        jdbc.update("delete from irrigations");
+        jdbc.update("delete from observations");
         jdbc.update("delete from plantations");
         jdbc.update("delete from campagne_parcelles");
         jdbc.update("delete from campagnes");
@@ -571,6 +575,225 @@ class RecetteKeycloakTests {
         api.perform(get("/api/plantations/pagination").header("Authorization", "Bearer " + agriculteur.token))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
         api.perform(get("/api/plantations/" + id).header("Authorization", "Bearer " + agronome.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.campagneCloturee").value(true));
+    }
+
+    @Test
+    void observationsAvecAuteurEtAccesReels() throws Exception {
+        CompteRecette agriculteur = creerCompteConnecte("observation-agri", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("observation-agro", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Ferme", "superficie", 20));
+        JsonNode parcelle = creerParcelle("Oliviers", exploitation);
+        JsonNode affectation = affecter(agriculteur, parcelle);
+        affecter(agronome, parcelle);
+        JsonNode culture = creerRessource("/api/cultures", Map.of("nom", "Olivier"));
+        JsonNode variete = creerRessource("/api/varietes", Map.of("nom", "Chemlali", "cultureId", culture.get("id").asLong()));
+        long campagneId = creerRessource("/api/campagnes", Map.of("nom", "Suivi 2020",
+                "dateDebut", "2020-01-01", "dateFin", "2020-12-31", "parcelleIds", List.of(parcelle.get("id").asLong())))
+                .get("id").asLong();
+        long plantationId = JSON.readTree(api.perform(post("/api/plantations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("parcelleId", parcelle.get("id").asLong(), "campagneId", campagneId,
+                        "varieteId", variete.get("id").asLong(), "datePlantation", "2010-01-01", "superficie", 2,
+                        "statut", "EN_COURS")))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        String demande = JSON.writeValueAsString(Map.of("plantationId", plantationId,
+                "dateObservation", "2020-06-01", "description", "Feuilles jaunes", "auteurNom", "Usurpation"));
+        long id = JSON.readTree(api.perform(post("/api/observations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json").content(demande))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        api.perform(get("/api/observations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        api.perform(put("/api/observations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande.replace("Feuilles jaunes", "Observation corrigee")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.auteurNom").value("Recette"));
+        api.perform(post("/api/observations").header("Authorization", "Bearer " + agronome.token)
+                .contentType("application/json").content(demande)).andExpect(status().isForbidden());
+        for (String statut : List.of("EN_COURS", "CLOTUREE")) {
+            api.perform(put("/api/campagnes/" + campagneId + "/statut").header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("statut", statut))))
+                    .andExpect(status().isOk());
+        }
+        api.perform(put("/api/observations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande)).andExpect(status().isConflict());
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get("/api/observations/" + id).header("Authorization", "Bearer " + agriculteur.token))
+                .andExpect(status().isForbidden());
+        api.perform(get("/api/observations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agriculteur.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/observations/" + id).header("Authorization", "Bearer " + agronome.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.campagneCloturee").value(true));
+    }
+
+    @Test
+    void irrigationsAvecAuteurEtAccesReels() throws Exception {
+        CompteRecette agriculteur = creerCompteConnecte("irrigation-agri", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("irrigation-agro", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Ferme", "superficie", 20));
+        JsonNode parcelle = creerParcelle("Oliviers", exploitation);
+        JsonNode affectation = affecter(agriculteur, parcelle);
+        affecter(agronome, parcelle);
+        JsonNode culture = creerRessource("/api/cultures", Map.of("nom", "Olivier"));
+        JsonNode variete = creerRessource("/api/varietes", Map.of("nom", "Chemlali", "cultureId", culture.get("id").asLong()));
+        long campagneId = creerRessource("/api/campagnes", Map.of("nom", "Suivi 2020",
+                "dateDebut", "2020-01-01", "dateFin", "2020-12-31", "parcelleIds", List.of(parcelle.get("id").asLong())))
+                .get("id").asLong();
+        long plantationId = JSON.readTree(api.perform(post("/api/plantations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("parcelleId", parcelle.get("id").asLong(), "campagneId", campagneId,
+                        "varieteId", variete.get("id").asLong(), "datePlantation", "2010-01-01", "superficie", 2,
+                        "statut", "EN_COURS")))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        String demande = JSON.writeValueAsString(Map.of("plantationId", plantationId,
+                "dateIrrigation", "2020-06-01", "commentaire", "Matin", "auteurNom", "Usurpation", "volume", 500, "unite", "LITRE"));
+        long id = JSON.readTree(api.perform(post("/api/irrigations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json").content(demande))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        api.perform(get("/api/irrigations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        api.perform(post("/api/irrigations").header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande.replace("\"volume\":500", "\"volume\":2")
+                        .replace("LITRE", "METRE_CUBE"))).andExpect(status().isCreated());
+        api.perform(get("/api/irrigations/total").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.volumeTotalMetresCubes").value(2.5));
+        api.perform(put("/api/irrigations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande.replace("\"volume\":500", "\"volume\":1").replace("LITRE", "METRE_CUBE")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.auteurNom").value("Recette"));
+        api.perform(get("/api/irrigations/total").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.volumeTotalMetresCubes").value(3));
+        api.perform(post("/api/irrigations").header("Authorization", "Bearer " + agronome.token)
+                .contentType("application/json").content(demande)).andExpect(status().isForbidden());
+        for (String statut : List.of("EN_COURS", "CLOTUREE")) {
+            api.perform(put("/api/campagnes/" + campagneId + "/statut").header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("statut", statut))))
+                    .andExpect(status().isOk());
+        }
+        api.perform(put("/api/irrigations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande)).andExpect(status().isConflict());
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get("/api/irrigations/" + id).header("Authorization", "Bearer " + agriculteur.token))
+                .andExpect(status().isForbidden());
+        api.perform(get("/api/irrigations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agriculteur.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/irrigations/total").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agriculteur.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/irrigations/" + id).header("Authorization", "Bearer " + agronome.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.campagneCloturee").value(true));
+    }
+
+    @Test
+    void fertilisationsAvecAuteurEtAccesReels() throws Exception {
+        CompteRecette agriculteur = creerCompteConnecte("fertilisation-agri", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("fertilisation-agro", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Ferme", "superficie", 20));
+        JsonNode parcelle = creerParcelle("Oliviers", exploitation);
+        JsonNode affectation = affecter(agriculteur, parcelle);
+        affecter(agronome, parcelle);
+        JsonNode culture = creerRessource("/api/cultures", Map.of("nom", "Olivier"));
+        JsonNode variete = creerRessource("/api/varietes", Map.of("nom", "Chemlali", "cultureId", culture.get("id").asLong()));
+        long campagneId = creerRessource("/api/campagnes", Map.of("nom", "Suivi 2020",
+                "dateDebut", "2020-01-01", "dateFin", "2020-12-31", "parcelleIds", List.of(parcelle.get("id").asLong())))
+                .get("id").asLong();
+        long plantationId = JSON.readTree(api.perform(post("/api/plantations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("parcelleId", parcelle.get("id").asLong(), "campagneId", campagneId,
+                        "varieteId", variete.get("id").asLong(), "datePlantation", "2010-01-01", "superficie", 2,
+                        "statut", "EN_COURS")))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        String demande = JSON.writeValueAsString(Map.of("plantationId", plantationId,
+                "dateFertilisation", "2020-06-01", "commentaire", "Feuilles jaunes", "auteurNom", "Usurpation", "nomProduit", "Produit test", "quantite", 2, "unite", "KILOGRAMME"));
+        long id = JSON.readTree(api.perform(post("/api/fertilisations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json").content(demande))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andExpect(jsonPath("$.nomProduit").value("Produit test"))
+                .andExpect(jsonPath("$.quantite").value(2))
+                .andExpect(jsonPath("$.unite").value("KILOGRAMME"))
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        api.perform(get("/api/fertilisations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        api.perform(put("/api/fertilisations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande.replace("\"quantite\":2", "\"quantite\":3")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andExpect(jsonPath("$.quantite").value(3));
+        api.perform(post("/api/fertilisations").header("Authorization", "Bearer " + agronome.token)
+                .contentType("application/json").content(demande)).andExpect(status().isForbidden());
+        for (String statut : List.of("EN_COURS", "CLOTUREE")) {
+            api.perform(put("/api/campagnes/" + campagneId + "/statut").header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("statut", statut))))
+                    .andExpect(status().isOk());
+        }
+        api.perform(put("/api/fertilisations/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande)).andExpect(status().isConflict());
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get("/api/fertilisations/" + id).header("Authorization", "Bearer " + agriculteur.token))
+                .andExpect(status().isForbidden());
+        api.perform(get("/api/fertilisations/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agriculteur.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/fertilisations/" + id).header("Authorization", "Bearer " + agronome.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.campagneCloturee").value(true));
+    }
+
+    @Test
+    void traitementsAvecAuteurEtAccesReels() throws Exception {
+        CompteRecette agriculteur = creerCompteConnecte("traitement-agri", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("traitement-agro", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Ferme", "superficie", 20));
+        JsonNode parcelle = creerParcelle("Oliviers", exploitation);
+        JsonNode affectation = affecter(agriculteur, parcelle);
+        affecter(agronome, parcelle);
+        JsonNode culture = creerRessource("/api/cultures", Map.of("nom", "Olivier"));
+        JsonNode variete = creerRessource("/api/varietes", Map.of("nom", "Chemlali", "cultureId", culture.get("id").asLong()));
+        long campagneId = creerRessource("/api/campagnes", Map.of("nom", "Suivi 2020",
+                "dateDebut", "2020-01-01", "dateFin", "2020-12-31", "parcelleIds", List.of(parcelle.get("id").asLong())))
+                .get("id").asLong();
+        long plantationId = JSON.readTree(api.perform(post("/api/plantations")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("parcelleId", parcelle.get("id").asLong(), "campagneId", campagneId,
+                        "varieteId", variete.get("id").asLong(), "datePlantation", "2010-01-01", "superficie", 2,
+                        "statut", "EN_COURS")))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        String demande = JSON.writeValueAsString(Map.of("plantationId", plantationId,
+                "dateTraitement", "2020-06-01", "commentaire", "Feuilles jaunes", "auteurNom", "Usurpation", "nomProduit", "Produit test", "quantite", 2, "unite", "KILOGRAMME", "cible", "Cible test"));
+        long id = JSON.readTree(api.perform(post("/api/traitements")
+                .header("Authorization", "Bearer " + agriculteur.token).contentType("application/json").content(demande))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andExpect(jsonPath("$.nomProduit").value("Produit test"))
+                .andExpect(jsonPath("$.quantite").value(2))
+                .andExpect(jsonPath("$.unite").value("KILOGRAMME"))
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+        api.perform(get("/api/traitements/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+        api.perform(put("/api/traitements/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande.replace("\"quantite\":2", "\"quantite\":3")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.auteurNom").value("Recette"))
+                .andExpect(jsonPath("$.quantite").value(3));
+        api.perform(post("/api/traitements").header("Authorization", "Bearer " + agronome.token)
+                .contentType("application/json").content(demande)).andExpect(status().isForbidden());
+        for (String statut : List.of("EN_COURS", "CLOTUREE")) {
+            api.perform(put("/api/campagnes/" + campagneId + "/statut").header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("statut", statut))))
+                    .andExpect(status().isOk());
+        }
+        api.perform(put("/api/traitements/" + id).header("Authorization", "Bearer " + agriculteur.token)
+                .contentType("application/json").content(demande)).andExpect(status().isConflict());
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get("/api/traitements/" + id).header("Authorization", "Bearer " + agriculteur.token))
+                .andExpect(status().isForbidden());
+        api.perform(get("/api/traitements/pagination").param("plantationId", Long.toString(plantationId))
+                .header("Authorization", "Bearer " + agriculteur.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/traitements/" + id).header("Authorization", "Bearer " + agronome.token))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.campagneCloturee").value(true));
     }
 
