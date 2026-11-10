@@ -136,6 +136,14 @@ Les tests couvrent :
     consultation par l'agronome, pagination, clôture et retrait d'accès.
 21. Les traitements : produit, cible et quantité conservés avec PostgreSQL, correction par l'agriculteur,
     consultation par l'agronome, clôture et refus d'accès après retrait d'affectation.
+22. Les récoltes : plusieurs enregistrements en kg ou tonnes, total converti, rendement réel par hectare,
+    recalcul après correction, auteur, consultation par l'agronome, clôture et retrait d'accès au bilan.
+23. L'historique agricole unifié : cinq types réunis dans PostgreSQL, tri et pagination globale,
+    filtres de type et de dates inclusives, lecture par les trois rôles, clôture et retrait d'affectation.
+24. Le parcours complet du sprint 2 : catalogue, campagne, plantation, cinq types d'activité,
+    conversions et rendement, partage entre deux agriculteurs et un agronome,
+    retrait individuel d'affectation avec le même JWT, maintien des autres accès,
+    réaffectation et clôture en lecture seule.
 
 Les refus SQL sont déclenchés par une contrainte ajoutée uniquement dans la base jetable.
 Un relais HTTP local provoque certaines réponses d'erreur ciblées avant de transmettre les autres appels au vrai Keycloak.
@@ -147,6 +155,6 @@ Les tests optionnels sont désactivés lors d'un `mvn test` habituel.
 Les deux conteneurs et leur stockage sont supprimés en fin de recette, y compris en cas d'échec.
 Le rapport Maven est conservé dans `backend/target/recette-reelle.log`.
 
-Résultat du 7 novembre 2026 : **21 tests réussis**, sans échec ni test ignoré.
+Résultat du 9 novembre 2026 : **24 tests réussis**, sans échec ni test ignoré.
 Les contrôles dans le navigateur font l'objet d'une validation globale déclarée par l'utilisateur,
 consignée séparément des tests automatisés dans [le guide final](../RECETTE_SPRINT_1.md).

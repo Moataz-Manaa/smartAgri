@@ -1,0 +1,104 @@
+<section
+  aria-labelledby="titre-historique"
+  class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7"
+>
+  <h2 id="titre-historique" class="text-xl font-bold text-slate-900">Historique agricole</h2>
+  <p class="mt-2 text-sm text-slate-500">
+    Toutes les activités de la plantation, de la plus récente à la plus ancienne.
+  </p>
+  <form (ngSubmit)="charger()" class="mt-6 grid gap-5 md:grid-cols-3">
+    <div class="min-w-0">
+      <label for="historique-type" class="libelle">Type d’activité</label>
+      <select id="historique-type" name="type" [(ngModel)]="type" class="champ">
+        <option value="">Toutes les activités</option>
+        <option value="OBSERVATION">Observations</option>
+        <option value="IRRIGATION">Irrigation</option>
+        <option value="FERTILISATION">Fertilisation</option>
+        <option value="TRAITEMENT">Traitements</option>
+        <option value="RECOLTE">Récoltes</option>
+      </select>
+    </div>
+    <div class="min-w-0">
+      <label for="historique-debut" class="libelle">Date de début</label>
+      <input
+        id="historique-debut"
+        type="date"
+        name="dateDebut"
+        [(ngModel)]="dateDebut"
+        class="champ"
+      />
+    </div>
+    <div class="min-w-0">
+      <label for="historique-fin" class="libelle">Date de fin</label>
+      <input id="historique-fin" type="date" name="dateFin" [(ngModel)]="dateFin" class="champ" />
+    </div>
+    <div class="flex flex-wrap gap-3 md:col-span-3">
+      <button
+        type="submit"
+        class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Filtrer
+      </button>
+      <button
+        type="button"
+        (click)="reinitialiser()"
+        class="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Réinitialiser les filtres
+      </button>
+    </div>
+  </form>
+  @if (erreur()) {
+    <p role="alert" class="mt-5 rounded-lg bg-red-50 p-4 text-red-700">{{ erreur() }}</p>
+  } @else if (chargement()) {
+    <p role="status" class="mt-5 text-slate-500">Chargement de l’historique…</p>
+  } @else {
+    <p aria-live="polite" class="mt-5 text-sm text-slate-500">
+      {{ totalElements() }} activité(s) trouvée(s)
+    </p>
+    @if (activites().length === 0) {
+      <p class="mt-4 rounded-lg bg-slate-50 p-5 text-slate-600">
+        Aucune activité pour cette sélection.
+      </p>
+    } @else {
+      <ol class="mt-5 space-y-4 border-l-2 border-emerald-100 pl-4">
+        @for (activite of activites(); track activite.type + '-' + activite.id) {
+          <li class="rounded-xl border border-slate-200 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-semibold text-emerald-800">{{ libelles[activite.type] }}</h3>
+              <time [attr.datetime]="activite.date" class="text-sm text-slate-500">{{
+                activite.date | date: 'dd/MM/yyyy'
+              }}</time>
+            </div>
+            @if (activite.nomProduit) {
+              <p class="mt-2 font-medium text-slate-800">{{ activite.nomProduit }}</p>
+            }
+            @if (activite.quantite !== null) {
+              <p class="mt-2 text-slate-700">
+                {{ activite.quantite | number: '1.0-3' }}
+                {{ unites[activite.unite || ''] || activite.unite }}
+              </p>
+            }
+            @if (activite.description) {
+              <p class="mt-2 whitespace-pre-line break-words text-slate-700">
+                {{ activite.description }}
+              </p>
+            }
+            <p class="mt-3 text-sm text-slate-500">
+              Saisie par {{ activite.auteurPrenom }} {{ activite.auteurNom }}
+            </p>
+          </li>
+        }
+      </ol>
+    }
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement()"
+      (pageChange)="charger($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

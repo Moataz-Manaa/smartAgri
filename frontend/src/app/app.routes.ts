@@ -20,6 +20,16 @@ import { UtilisateurFormulaire } from './features/utilisateur/utilisateur-formul
 
 export const routes: Routes = [
   {
+    path: 'recoltes/nouvelle',
+    loadComponent: chargerFormulaireRecolte,
+    canActivate: [agriculteurGuard],
+  },
+  {
+    path: 'recoltes/:id/modifier',
+    loadComponent: chargerFormulaireRecolte,
+    canActivate: [agriculteurGuard],
+  },
+  {
     path: 'fertilisations/nouvelle',
     loadComponent: chargerFormulaireFertilisation,
     canActivate: [agriculteurGuard],
@@ -216,4 +226,9 @@ async function chargerFormulaireTraitement() {
   const composant =
     await import('./features/traitement/traitement-formulaire/traitement-formulaire');
   return composant.TraitementFormulaire;
+}
+
+async function chargerFormulaireRecolte() {
+  const composant = await import('./features/recolte/recolte-formulaire/recolte-formulaire');
+  return composant.RecolteFormulaire;
 }

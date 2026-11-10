@@ -34,6 +34,7 @@ public class PlantationServiceImpl implements PlantationService {
     private final IrrigationRepository irrigationRepository;
     private final FertilisationRepository fertilisationRepository;
     private final TraitementRepository traitementRepository;
+    private final RecolteRepository recolteRepository;
 
     @Override
     public PlantationResponse creer(PlantationRequest request) {
@@ -89,6 +90,15 @@ public class PlantationServiceImpl implements PlantationService {
                 && (fertilisationRepository.existsByPlantation_Id(id) || traitementRepository.existsByPlantation_Id(id))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La variété ne peut pas changer après l'enregistrement d'opérations agricoles");
+        }
+        if (recolteRepository.existsByPlantation_IdAndDateRecolteBefore(id, request.getDatePlantation())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La plantation ne peut pas commencer après une récolte existante");
+        }
+        if (!plantation.getVariete().getId().equals(request.getVarieteId())
+                && recolteRepository.existsByPlantation_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La variété ne peut pas changer après l'enregistrement d'une récolte");
         }
         plantation.setVariete(variete);
         appliquerDonnees(plantation, request);

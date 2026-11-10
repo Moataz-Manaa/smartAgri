@@ -1,6 +1,10 @@
 # SmartAgri
 
-Le sprint 1 est clôturé. Le **sprint 2 est en cours** : voir le [plan de travail et le suivi](SPRINT_2.md).
+Les sprints 1 et 2 sont clôturés : voir le [plan de travail du sprint 2](SPRINT_2.md).
+
+Sprint 2 : **100 % — 36 tâches sur 36**, clôturé le **10 novembre 2026**.
+La recette automatisée est réussie et l'utilisateur a validé les vues sur ordinateur et mobile :
+voir [la fiche de recette](RECETTE_SPRINT_2.md).
 
 Plateforme intelligente de gestion agricole destinée à une seule société, possédant plusieurs exploitations et parcelles.
 
@@ -328,13 +332,13 @@ ng serve
 
 Ouvrir `http://localhost:4200` et se connecter.
 
-## Vérifications — mise à jour du 7 novembre 2026
+## Vérifications — mise à jour du 10 novembre 2026
 
 | Vérification | Résultat |
 | --- | --- |
-| Compilation et tests backend | 91 tests réussis, incluant les fertilisations et traitements du sprint 2 |
-| Recette API avec Keycloak et PostgreSQL réels | 21 tests réussis dans deux conteneurs temporaires, incluant les nouveaux modules et leurs autorisations |
-| Tests Angular | 102 tests réussis, incluant les formulaires et les historiques des fertilisations et traitements |
+| Compilation et tests backend | 107 tests réussis, incluant l'historique agricole unifié et ses filtres |
+| Recette API avec Keycloak et PostgreSQL réels | 24 tests réussis dans deux conteneurs temporaires, incluant le parcours complet du sprint 2 |
+| Tests Angular | 121 tests réussis, incluant les filtres, la pagination et les états de l'historique |
 | Compilation Angular de production | Réussie |
 | Réimport du realm Keycloak dans un conteneur neuf | Réussi le 26 octobre 2026 : rôles, Angular, PKCE, audience, secret par variable et permissions du compte technique vérifiés |
 

@@ -18,6 +18,7 @@ import com.example.backend.repository.ObservationRepository;
 import com.example.backend.repository.IrrigationRepository;
 import com.example.backend.repository.FertilisationRepository;
 import com.example.backend.repository.TraitementRepository;
+import com.example.backend.repository.RecolteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -43,6 +44,7 @@ public class CampagneServiceImpl implements CampagneService {
     private final IrrigationRepository irrigationRepository;
     private final FertilisationRepository fertilisationRepository;
     private final TraitementRepository traitementRepository;
+    private final RecolteRepository recolteRepository;
     private final AutorisationService autorisationService;
     private final ParcelleRepository parcelleRepository;
     private final AffectationRepository affectationRepository;
@@ -106,6 +108,11 @@ public class CampagneServiceImpl implements CampagneService {
                 || traitementRepository.existsByPlantation_Campagne_IdAndDateTraitementAfter(id, request.getDateFin())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ces dates excluent une fertilisation ou un traitement existant de la campagne");
+        }
+        if (recolteRepository.existsByPlantation_Campagne_IdAndDateRecolteBefore(id, request.getDateDebut())
+                || recolteRepository.existsByPlantation_Campagne_IdAndDateRecolteAfter(id, request.getDateFin())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ces dates excluent une récolte existante de la campagne");
         }
         campagne.setNom(nom);
         campagne.setNomNormalise(nomNormalise);

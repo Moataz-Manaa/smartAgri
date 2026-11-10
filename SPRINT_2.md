@@ -8,10 +8,11 @@ Le sprint reprend les conventions de code du sprint 1.
 
 ## Avancement
 
-Au **7 novembre 2026 : 72 %**, soit **26 tâches terminées sur 36** dans le plan ci-dessous.
+Au **10 novembre 2026 : 100 %**, soit **36 tâches terminées sur 36** dans le plan ci-dessous.
 Le calcul utilise les cases cochées, arrondi au pourcentage entier ; il ne mesure pas le temps de développement.
 Ce bilan sera actualisé et communiqué à chaque livraison, conformément à la demande de l'utilisateur.
-Les validations visuelles non confirmées restent à faire.
+Les écrans sur ordinateur et mobile ont été validés par l'utilisateur. Le sprint 2 est clôturé.
+Voir [la fiche de recette finale](RECETTE_SPRINT_2.md).
 
 ## Conventions conservées
 
@@ -47,7 +48,7 @@ s'appliqueront aux plantations et aux opérations agricoles.
 - [x] Créer les listes et formulaires Angular, avec filtre des variétés par culture.
 - [x] Ajouter la navigation et appliquer les autorisations dans l'API et dans Angular.
 - [x] Tester les règles et les parcours Angular, et compiler les applications.
-- [ ] Valider visuellement les nouveaux écrans avec les trois rôles.
+- [x] Valider visuellement les nouveaux écrans avec les trois rôles.
 
 ### Étape 3 — Campagnes agricoles
 
@@ -55,7 +56,7 @@ s'appliqueront aux plantations et aux opérations agricoles.
 - [x] Créer les entités, DTO, repositories, services et contrôleurs.
 - [x] Réaliser la liste, le détail et le formulaire Angular.
 - [x] Vérifier les dates et les statuts Planifiée, En cours et Clôturée.
-- [ ] Valider visuellement les nouveaux écrans de campagne.
+- [x] Valider visuellement les nouveaux écrans de campagne.
 
 ### Étape 4 — Plantations
 
@@ -64,7 +65,7 @@ s'appliqueront aux plantations et aux opérations agricoles.
 - [x] Vérifier les dates, les superficies et la cohérence de la variété avec sa culture.
 - [x] Afficher les plantations dans le détail d'une parcelle, avec filtres et pagination.
 - [x] Protéger la cohérence du catalogue lorsqu'il est référencé par une plantation.
-- [ ] Valider visuellement les nouveaux écrans des plantations sur ordinateur et mobile.
+- [x] Valider visuellement les nouveaux écrans des plantations sur ordinateur et mobile.
 
 ### Étape 5 — Observations agricoles
 
@@ -84,19 +85,19 @@ s'appliqueront aux plantations et aux opérations agricoles.
 
 ### Étape 8 — Récoltes
 
-- [ ] Enregistrer plusieurs récoltes par plantation avec date, quantité et unité.
-- [ ] Afficher la quantité totale et le rendement réel lorsque les données le permettent.
+- [x] Enregistrer plusieurs récoltes par plantation avec date, quantité et unité.
+- [x] Afficher la quantité totale et le rendement réel lorsque les données le permettent.
 
 ### Étape 9 — Historique agricole
 
-- [ ] Regrouper observations, irrigation, fertilisation, traitements et récoltes dans la plantation.
-- [ ] Ajouter les filtres, la pagination et les états vides nécessaires.
+- [x] Regrouper observations, irrigation, fertilisation, traitements et récoltes dans la plantation.
+- [x] Ajouter les filtres, la pagination et les états vides nécessaires.
 
 ### Étape 10 — Recette et livraison
 
-- [ ] Vérifier les parcours complets et la perte d'accès après retrait d'une affectation.
-- [ ] Exécuter les tests et les compilations du sprint.
-- [ ] Valider les écrans sur ordinateur et mobile, puis consigner la recette.
+- [x] Vérifier les parcours complets et la perte d'accès après retrait d'une affectation.
+- [x] Exécuter les tests et les compilations du sprint.
+- [x] Valider les écrans sur ordinateur et mobile, puis consigner la recette.
 
 ## Première livraison — Catalogue agricole
 
@@ -612,4 +613,157 @@ La présentation visuelle sur ordinateur et mobile reste à confirmer.
 8. Retirer une affectation et vérifier le refus de consultation et de modification de ces opérations.
 9. Vérifier les champs, les cartes et la pagination sur mobile.
 
-La prochaine étape est **l'étape 8 — Enregistrement et suivi des récoltes**.
+## Septième livraison — Récoltes et rendement réel
+
+Livraison du **9 novembre 2026**. Une plantation peut recevoir plusieurs récoltes pendant sa campagne.
+Chaque récolte contient sa date, une quantité positive, une unité obligatoire (`KILOGRAMME` ou `TONNE`),
+un commentaire facultatif de 255 caractères maximum et son auteur initial déterminé côté backend.
+La quantité accepte au plus 12 chiffres entiers et 3 décimales. BigDecimal conserve la précision des calculs.
+Hibernate crée la table `recoltes`, sans migration ni suppression en cascade.
+
+L'agriculteur affecté ajoute et modifie les récoltes ; l'agronome affecté et l'administrateur les consultent.
+La date appartient à la campagne, ne précède pas la plantation et n'est pas future.
+L'auteur et le rattachement à la plantation sont conservés pendant les modifications.
+La clôture impose la lecture seule. Le retrait d'affectation bloque aussi les pages et le bilan.
+Les modifications de dates des campagnes ou plantations ne peuvent pas invalider une récolte existante.
+La variété d'une plantation ayant des récoltes ne peut plus être remplacée.
+Les écritures partagent le verrou de campagne existant et disposent d'une version interne.
+
+Le total porte sur toutes les pages et est converti en kilogrammes : **500 kg + 2 t = 2 500 kg**.
+Le rendement réel enregistré est le cumul récolté divisé par la superficie de la plantation, en kg/ha,
+avec un arrondi à trois décimales au plus proche, égalités vers le haut.
+Sur une plantation de 2 ha, cet exemple donne 1 250 kg/ha.
+Sans récolte ou superficie valide, le rendement est **Non disponible**.
+Une correction de quantité, d'unité ou de superficie recalcule le bilan.
+Le statut de la plantation reste géré séparément pour permettre plusieurs passages de récolte.
+
+Le détail d'une plantation affiche l'historique paginé, le total et le rendement.
+Les routes des formulaires sont `/recoltes/nouvelle?plantationId={id}` et `/recoltes/{id}/modifier`.
+L'API propose POST `/api/recoltes`, GET et PUT `/api/recoltes/{id}`,
+GET `/api/recoltes/pagination?plantationId={id}` et GET `/api/recoltes/total?plantationId={id}`.
+La pagination reprend `page` et `taille`, avec tri par date puis identifiant décroissants.
+Un échec de chargement efface les anciennes données et le bilan. Aucun bouton Actualiser n'est ajouté.
+
+Vérifications : **101 tests backend**, **113 tests Angular** et **22 tests PostgreSQL/Keycloak réels** réussis.
+Les tests couvrent les conversions, le rendement et son arrondi, le recalcul après correction de superficie,
+le total indépendant des pages, l'absence de rendement avant récolte, les dates, les droits, la clôture,
+le retrait d'affectation, les formulaires et les doubles soumissions.
+Les compilations réussissent ; le chargement initial Angular est de 498,34 kB, sous le budget existant.
+Les conteneurs temporaires ont été supprimés après les tests. La vérification visuelle reste à confirmer.
+
+Recette manuelle : avec des valeurs fictives, enregistrer 500 kg puis 2 tonnes sur une plantation de 2 ha.
+Vérifier 2 500 kg et 1 250 kg/ha, puis corriger la première récolte en 1 tonne et vérifier 3 000 kg et 1 500 kg/ha.
+Vérifier les pages, les quantités invalides, les dates futures, la lecture par l'agronome, la clôture,
+le retrait d'affectation et la présentation sur mobile.
+
+## Huitième livraison — Historique agricole unifié
+
+Livraison du **9 novembre 2026**. Le détail d'une plantation affiche une chronologie commune
+des observations, irrigations, fertilisations, traitements et récoltes.
+Chaque entrée affiche son type, sa date, son auteur, son texte et, selon l'activité,
+le produit, la quantité et l'unité d'origine. Les valeurs ne sont pas additionnées entre types.
+Les listes détaillées, les formulaires et les bilans existants restent disponibles
+dans **Consulter les listes détaillées et les bilans**, sous la chronologie.
+
+### Filtres et pagination
+
+GET `/api/historique/pagination?plantationId={id}` accepte `page`, `taille`,
+`type`, `dateDebut` et `dateFin`. Le type et les dates sont facultatifs.
+Les dates sont inclusives et une période inversée est refusée.
+Les types possibles sont `OBSERVATION`, `IRRIGATION`, `FERTILISATION`, `TRAITEMENT` et `RECOLTE`.
+La taille reste comprise entre 1 et 100, avec 10 éléments par défaut et une page commençant à zéro.
+
+Le backend applique les filtres et compte les résultats avant la pagination globale.
+Le tri est par date décroissante, puis type alphabétique et identifiant décroissant pour départager les égalités.
+Le repository lit les cinq tables existantes avec `JdbcTemplate` et `UNION ALL` :
+aucune nouvelle table, aucune migration, aucun enregistrement d'historique à maintenir en double.
+Les paramètres SQL sont liés séparément des chaînes de requête.
+Les corrections des opérations apparaissent directement dans la chronologie.
+
+L'accès à la parcelle est vérifié avant toute requête d'historique ou de comptage.
+L'administrateur consulte l'ensemble ; les agriculteurs et agronomes consultent leurs parcelles affectées.
+Une campagne clôturée reste consultable. Le retrait d'affectation bloque aussi cet historique.
+
+Dans Angular, **Filtrer** revient à la première page et **Réinitialiser les filtres** retrouve toutes les activités.
+Le composant partagé gère les pages et leur taille. Les anciennes requêtes sont annulées,
+et les activités comme les compteurs sont effacés au chargement ou en cas d'erreur.
+Des messages distincts indiquent le chargement, l'absence de résultat et le refus d'accès.
+La clé d'affichage combine type et identifiant, car deux tables peuvent partager un même identifiant.
+Aucun bouton Actualiser n'a été ajouté.
+
+### Vérifications
+
+| Vérification | Résultat |
+| --- | --- |
+| Tests backend habituels | 107 réussis, dont 6 nouveaux tests d'historique |
+| Tests Angular | 121 réussis, dont 8 nouveaux tests d'historique |
+| Recette PostgreSQL et Keycloak réels | 23 réussis, dont le parcours d'historique mixte |
+| Compilation Angular de production | Réussie, chargement initial de 498,70 kB sous le budget existant |
+
+Les tests vérifient les cinq types, le tri entre tables, les pages suivantes, les dates inclusives,
+le comptage après filtrage, la séparation des plantations, les périodes et tailles invalides,
+les corrections sans duplication, la clôture et le retrait d'affectation.
+Les tests Angular vérifient aussi le formulaire de filtre, les unités, les identifiants partagés,
+la réinitialisation, l'annulation des requêtes et l'effacement des données après un refus d'accès.
+Les conteneurs de recette temporaires ont été supprimés après exécution.
+La présentation sur ordinateur et mobile reste à confirmer visuellement.
+
+### Recette manuelle
+
+1. Ouvrir une plantation contenant plusieurs types d'activités.
+2. Vérifier leur ordre chronologique, les dates, les auteurs et les unités.
+3. Filtrer par type puis par période ; vérifier les dates limites et le nombre de résultats.
+4. Changer la taille des pages, passer à la suivante puis réinitialiser les filtres.
+5. Vérifier une sélection vide et le refus d'une période inversée.
+6. Ouvrir les listes détaillées pour ajouter ou modifier une opération et consulter les bilans.
+7. Vérifier la consultation comme agronome, après clôture, puis le refus après retrait d'affectation.
+8. Vérifier les filtres, les cartes et la pagination sur ordinateur et mobile.
+
+## Neuvième livraison — Recette finale du sprint 2
+
+Vérifications du **9 novembre 2026** :
+
+- **107 tests backend réussis** et JAR Spring Boot généré avec `mvn package`.
+- **121 tests Angular réussis** et compilation de production réussie.
+- **24 tests PostgreSQL/Keycloak réels réussis**, dont un nouveau parcours complet du sprint.
+- Budget initial Angular conservé : **498,70 kB** pour un seuil de 500 kB.
+
+Le nouveau parcours crée le catalogue, la campagne, la plantation et les cinq types d'activité.
+Deux agriculteurs et un agronome partagent la même parcelle. Les cumuls vérifiés sont
+1 000 L + 2 m³ = 3 m³ et 500 kg + 2 t = 2 500 kg, soit 1 250 kg/ha sur 2 ha.
+L'agronome consulte les données sans pouvoir écrire.
+Le retrait individuel bloque immédiatement les lectures, les créations et les modifications
+du compte concerné avec son jeton existant, y compris les pages, l'historique et les bilans.
+Les autres affectations et les données restent conservées.
+Une réaffectation rétablit la consultation. La clôture empêche les créations et corrections
+des cinq types d'activité, tout en permettant leur consultation.
+
+Les services de recette sont jetables et ont été supprimés après exécution.
+Les rapports se trouvent dans `backend/target`, avec leurs chemins dans
+[RECETTE_SPRINT_2.md](RECETTE_SPRINT_2.md).
+
+L'utilisateur a confirmé : **« Vérifié sur ordinateur uniquement »**.
+Cette validation couvre les écrans du catalogue avec les trois rôles, les campagnes,
+les plantations, les formulaires agricoles et l'historique filtré sur ordinateur.
+L'agent n'a pas pu les observer : le démarrage de l'outil Windows a échoué avec
+`helper_unknown_error: setup refresh had errors`.
+
+À cette livraison du 9 novembre, les deux cases restantes concernaient la vérification sur mobile :
+plantations, puis recette visuelle globale. Leur validation est consignée ci-dessous.
+
+## Clôture du sprint 2 — 10 novembre 2026
+
+L'utilisateur a confirmé : **« la vue mobile est correcte »**.
+Cette confirmation complète sa validation sur ordinateur du 9 novembre et permet de fermer les deux tâches restantes.
+La validation visuelle est déclarée par l'utilisateur ; elle n'a pas été observée par l'agent.
+Les dimensions d'écran et les résultats détaillés par écran n'ont pas été consignés.
+
+Les dernières améliorations concernent les champs de type et de dates de l'historique,
+puis le sidenav qui reste visible pendant le défilement sur ordinateur.
+Après ces changements, **121 tests Angular réussissent** et la compilation de production passe,
+avec **498,97 kB** de chargement initial pour un budget de 500 kB.
+Les derniers contrôles backend restent ceux de la recette du 9 novembre :
+**107 tests habituels et 24 tests PostgreSQL/Keycloak réels réussis**.
+
+**Sprint 2 terminé : 36/36 tâches, soit 100 %.**
+La recette est consignée dans [RECETTE_SPRINT_2.md](RECETTE_SPRINT_2.md).

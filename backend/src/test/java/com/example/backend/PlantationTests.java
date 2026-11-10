@@ -65,8 +65,11 @@ class PlantationTests {
     @Autowired com.example.backend.repository.FertilisationRepository fertilisations;
     @Autowired com.example.backend.repository.TraitementRepository traitements;
 
+    @Autowired com.example.backend.repository.RecolteRepository recoltes;
+
     @BeforeEach
     void preparer() throws Exception {
+        recoltes.deleteAll();
         traitements.deleteAll();
         fertilisations.deleteAll();
         irrigations.deleteAll();

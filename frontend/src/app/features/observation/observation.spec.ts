@@ -1,3 +1,5 @@
+import { HistoriqueService } from '../../core/services/historique';
+import { RecolteService } from '../../core/services/recolte';
 import { TraitementService } from '../../core/services/traitement';
 import { FertilisationService } from '../../core/services/fertilisation';
 import { IrrigationService } from '../../core/services/irrigation';
@@ -67,7 +69,27 @@ describe('Observations agricoles', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        {
+          provide: HistoriqueService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+          },
+        },
         provideRouter(routes),
+        {
+          provide: RecolteService,
+          useValue: {
+            consulterPage: () =>
+              of({ contenu: [], page: 0, taille: 10, totalElements: 0, totalPages: 0 }),
+            consulterTotal: () =>
+              of({
+                quantiteTotaleKilogrammes: 0,
+                superficieHectares: 2,
+                rendementKgParHectare: null,
+              }),
+          },
+        },
         {
           provide: TraitementService,
           useValue: {

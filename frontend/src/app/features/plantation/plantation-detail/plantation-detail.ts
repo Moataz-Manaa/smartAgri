@@ -9,6 +9,8 @@ import { ObservationListe } from '../../observation/observation-liste/observatio
 import { IrrigationListe } from '../../irrigation/irrigation-liste/irrigation-liste';
 import { FertilisationListe } from '../../fertilisation/fertilisation-liste/fertilisation-liste';
 import { TraitementListe } from '../../traitement/traitement-liste/traitement-liste';
+import { RecolteListe } from '../../recolte/recolte-liste/recolte-liste';
+import { HistoriqueListe } from '../../historique/historique-liste';
 
 @Component({
   selector: 'app-plantation-detail',
@@ -20,6 +22,8 @@ import { TraitementListe } from '../../traitement/traitement-liste/traitement-li
     IrrigationListe,
     FertilisationListe,
     TraitementListe,
+    RecolteListe,
+    HistoriqueListe,
   ],
   templateUrl: './plantation-detail.html',
 })
