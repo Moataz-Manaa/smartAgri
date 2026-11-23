@@ -29,3 +29,11 @@ Thumbs.db
 
 # Preserve the original frontend repository locally
 /.frontend-git-backup/
+
+# Structure conservee a la racine du depot
+/*
+!/.gitignore
+!/README.md
+!/backend/
+!/frontend/
+!/keycloak/
