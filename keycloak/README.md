@@ -144,6 +144,22 @@ Les tests couvrent :
     conversions et rendement, partage entre deux agriculteurs et un agronome,
     retrait individuel d'affectation avec le même JWT, maintien des autres accès,
     réaffectation et clôture en lecture seule.
+25. La localisation du sprint 3 : coordonnées nulles ou complètes, zéro conservé dans PostgreSQL,
+    correction et effacement par l'administrateur, refus des valeurs partielles et hors limites,
+    conservation des valeurs après un refus et consultation sans modification par les comptes affectés.
+26. La météo par parcelle : fournisseur HTTP local avec une clé fictive, trois rôles réellement connectés,
+    conversion des données et des probabilités, partage du cache entre parcelles et refus d'accès après retrait d'affectation.
+27. Les alertes : stockage dans PostgreSQL pour une parcelle créée par l'API, réévaluation sans doublon
+    et levée après réception de nouvelles valeurs qui n'atteignent plus les seuils.
+28. L'API des alertes : filtres combinés et pagination PostgreSQL, lecture personnelle et répétée,
+    indépendance des autres comptes, compteurs, retrait individuel d'affectation et réaffectation avec les mêmes JWT.
+29. Le tableau de bord : agrégations et activités récentes avec PostgreSQL, filtres de période, campagne
+    et parcelle, cumuls en m³ et kg sans doubler les parcelles partagées, lecture personnelle des alertes,
+    consultation par les trois rôles et retrait immédiat d'accès avec les mêmes JWT.
+30. Le parcours intégré du sprint 3 : collecte météo HTTP, génération sans doublon, lecture personnelle,
+    compteurs du tableau de bord, panne fournisseur, source ancienne puis indisponible, retrait d'affectation,
+    réaffectation et expiration à l'échéance. Seule l'horloge météo est contrôlée pour avancer le temps ;
+    les JWT, comptes et persistances restent réels. Le fournisseur HTTP est local et fictif.
 
 Les refus SQL sont déclenchés par une contrainte ajoutée uniquement dans la base jetable.
 Un relais HTTP local provoque certaines réponses d'erreur ciblées avant de transmettre les autres appels au vrai Keycloak.
@@ -155,6 +171,7 @@ Les tests optionnels sont désactivés lors d'un `mvn test` habituel.
 Les deux conteneurs et leur stockage sont supprimés en fin de recette, y compris en cas d'échec.
 Le rapport Maven est conservé dans `backend/target/recette-reelle.log`.
 
-Résultat du 9 novembre 2026 : **24 tests réussis**, sans échec ni test ignoré.
-Les contrôles dans le navigateur font l'objet d'une validation globale déclarée par l'utilisateur,
-consignée séparément des tests automatisés dans [le guide final](../RECETTE_SPRINT_1.md).
+Résultat du 14 novembre 2026 : **30 tests réussis**, sans échec ni test ignoré.
+La validation visuelle du sprint 3 utilise un Firefox isolé avec API/authentification fictives,
+distinct de la recette PostgreSQL/Keycloak : voir [le guide de recette du sprint 3](../RECETTE_SPRINT_3.md).
+Les confirmations utilisateur des sprints précédents restent consignées dans leurs propres guides.

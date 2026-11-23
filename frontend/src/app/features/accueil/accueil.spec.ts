@@ -13,6 +13,8 @@ import { AffectationService } from '../../core/services/affectation';
 import { PageResponse } from '../../core/models/page';
 import { ParcelleResponse } from '../../core/models/parcelle';
 import { routes } from '../../app.routes';
+import { CampagneService } from '../../core/services/campagne';
+import { TableauDeBordService } from '../../core/services/tableau-de-bord';
 
 describe('Accueil selon le rôle', () => {
   let role: string;
@@ -25,7 +27,10 @@ describe('Accueil selon le rôle', () => {
     totalPages: total,
   });
   let exploitations: { consulterPage: ReturnType<typeof vi.fn> };
-  let parcelles: { consulterPage: ReturnType<typeof vi.fn> };
+  let parcelles: {
+    consulterPage: ReturnType<typeof vi.fn>;
+    consulterToutes: ReturnType<typeof vi.fn>;
+  };
   let utilisateurs: { consulterPage: ReturnType<typeof vi.fn> };
   let affectations: { consulterPage: ReturnType<typeof vi.fn> };
 
@@ -33,7 +38,7 @@ describe('Accueil selon le rôle', () => {
     role = 'ADMIN';
     connecte = true;
     exploitations = { consulterPage: vi.fn(() => of(page(2))) };
-    parcelles = { consulterPage: vi.fn(() => of(page(3))) };
+    parcelles = { consulterPage: vi.fn(() => of(page(3))), consulterToutes: vi.fn(() => of([])) };
     utilisateurs = { consulterPage: vi.fn(() => of(page(4))) };
     affectations = { consulterPage: vi.fn(() => of(page(7))) };
     TestBed.configureTestingModule({
@@ -52,6 +57,15 @@ describe('Accueil selon le rôle', () => {
         { provide: ParcelleService, useValue: parcelles },
         { provide: UtilisateurService, useValue: utilisateurs },
         { provide: AffectationService, useValue: affectations },
+        { provide: CampagneService, useValue: { consulterToutes: () => of([]) } },
+        {
+          provide: TableauDeBordService,
+          useValue: {
+            consulterSynthese: () => of(null),
+            consulterActivites: () => of([]),
+            consulterAlertes: () => of(null),
+          },
+        },
       ],
     });
   });

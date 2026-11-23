@@ -1,0 +1,249 @@
+<section
+  aria-labelledby="titre-meteo"
+  class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"
+>
+  <header class="rounded-t-2xl border-b border-slate-100 bg-slate-50/70 p-5 sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="rounded-xl bg-sky-100 p-3 text-sky-700">
+          <svg
+            class="h-6 w-6"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9H7Z"
+            />
+          </svg>
+        </span>
+        <div>
+          <h2 id="titre-meteo" class="text-xl font-bold text-slate-900">Météo de la parcelle</h2>
+          <p class="mt-1 text-sm text-slate-500">
+            Conditions et prévisions au point de l’exploitation.
+          </p>
+        </div>
+      </div>
+      @if (donneesVisibles() && meteo()?.statut === 'DISPONIBLE') {
+        <span class="rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800"
+          >Données disponibles</span
+        >
+      }
+    </div>
+  </header>
+
+  <div class="p-5 sm:p-6">
+    @if (chargement()) {
+      <p role="status" class="text-sm text-slate-500">Chargement de la météo…</p>
+    } @else if (erreur()) {
+      <p role="alert" class="rounded-xl bg-red-50 p-4 text-sm text-red-800">{{ erreur() }}</p>
+    } @else if (meteo(); as m) {
+      <div class="mb-5 text-sm leading-relaxed text-slate-600">
+        <p class="font-medium text-slate-800">{{ m.exploitationNom }}</p>
+        @if (m.latitude !== null && m.longitude !== null) {
+          <p class="mt-1">
+            Point de référence : {{ m.latitude | number: '1.0-5' }},
+            {{ m.longitude | number: '1.0-5' }}.
+          </p>
+        }
+        <p class="mt-1">
+          Ces données sont estimées pour ce point géographique ; elles ne sont pas mesurées sur la
+          parcelle.
+        </p>
+      </div>
+
+      @if (m.statut === 'PERIMEE') {
+        <div
+          role="status"
+          class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p class="font-semibold">Dernières données connues — mise à jour indisponible</p>
+          <p class="mt-1">{{ m.message }}</p>
+        </div>
+      }
+
+      @if (donneesVisibles()) {
+        @if (m.donnees; as d) {
+          <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <h3 class="font-semibold text-slate-900">Dernières conditions</h3>
+            <p class="text-xs text-slate-500">
+              Données du
+              {{ d.conditions.dateDonnees | date: 'dd/MM/yyyy à HH:mm' : decalageHoraire() }} ({{
+                libelleHoraire()
+              }})
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="min-w-0 rounded-xl border border-sky-100 bg-sky-50 p-4">
+              <p class="text-sm text-sky-800">Température</p>
+              <p class="mt-2 text-2xl font-bold text-slate-900">
+                @if (d.conditions.temperatureCelsius !== null) {
+                  {{ d.conditions.temperatureCelsius | number: '1.0-1' }} °C
+                } @else {
+                  <span class="text-sm font-medium">Non disponible</span>
+                }
+              </p>
+            </div>
+            <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-sm text-slate-600">Humidité</p>
+              <p class="mt-2 text-2xl font-bold text-slate-900">
+                @if (d.conditions.humiditePourcent !== null) {
+                  {{ d.conditions.humiditePourcent | number: '1.0-0' }} %
+                } @else {
+                  <span class="text-sm font-medium">Non disponible</span>
+                }
+              </p>
+            </div>
+            <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-sm text-slate-600">Pluie sur la dernière heure</p>
+              <p class="mt-2 text-2xl font-bold text-slate-900">
+                @if (d.conditions.pluieDerniereHeureMillimetres !== null) {
+                  {{ d.conditions.pluieDerniereHeureMillimetres | number: '1.0-2' }} mm
+                } @else {
+                  <span class="text-sm font-medium">Non disponible</span>
+                }
+              </p>
+            </div>
+          </div>
+          @if (d.conditions.description) {
+            <p class="mt-3 text-sm capitalize text-slate-600">{{ d.conditions.description }}</p>
+          }
+
+          <div class="mb-4 mt-7">
+            <h3 class="font-semibold text-slate-900">Prévisions toutes les 3 heures</h3>
+            <p class="mt-1 text-sm text-slate-500">
+              Jusqu’à cinq jours selon les données disponibles. Heures affichées en
+              {{ libelleHoraire() }}.
+            </p>
+          </div>
+          @if (previsions().length === 0) {
+            <p class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              Aucune prévision disponible.
+            </p>
+          } @else {
+            <ol class="grid gap-3 sm:grid-cols-2">
+              @for (p of previsionsPage(); track p.datePrevision) {
+                <li class="min-w-0 rounded-xl border border-slate-200 p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <time
+                      [attr.datetime]="p.datePrevision"
+                      class="text-sm font-semibold text-slate-900"
+                      >{{ p.datePrevision | date: 'dd/MM/yyyy — HH:mm' : decalageHoraire() }}</time
+                    >
+                    @if (p.temperatureCelsius !== null) {
+                      <span class="font-bold text-sky-800"
+                        >{{ p.temperatureCelsius | number: '1.0-1' }} °C</span
+                      >
+                    } @else {
+                      <span class="text-sm text-slate-500">Température non disponible</span>
+                    }
+                  </div>
+                  @if (p.description) {
+                    <p class="mt-2 text-sm capitalize text-slate-500">{{ p.description }}</p>
+                  }
+                  <dl class="mt-3 space-y-2 text-sm">
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                      <dt class="text-slate-500">Humidité</dt>
+                      <dd class="font-medium text-slate-700">
+                        @if (p.humiditePourcent !== null) {
+                          {{ p.humiditePourcent | number: '1.0-0' }} %
+                        } @else {
+                          Non disponible
+                        }
+                      </dd>
+                    </div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                      <dt class="text-slate-500">Probabilité de précipitations</dt>
+                      <dd class="font-medium text-slate-700">
+                        @if (p.probabilitePrecipitationsPourcent !== null) {
+                          {{ p.probabilitePrecipitationsPourcent | number: '1.0-0' }} %
+                        } @else {
+                          Non disponible
+                        }
+                      </dd>
+                    </div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                      <dt class="text-slate-500">Pluie sur 3 heures</dt>
+                      <dd class="font-medium text-slate-700">
+                        @if (p.pluieTroisHeuresMillimetres !== null) {
+                          {{ p.pluieTroisHeuresMillimetres | number: '1.0-2' }} mm
+                        } @else {
+                          Non disponible
+                        }
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              }
+            </ol>
+            <app-pagination
+              [page]="page()"
+              [taille]="taille()"
+              [totalElements]="previsions().length"
+              [totalPages]="totalPages()"
+              (pageChange)="changerPage($event)"
+              (tailleChange)="changerTaille($event)"
+            />
+          }
+          <p class="mt-4 text-xs leading-relaxed text-slate-500">
+            Dernière récupération :
+            {{ d.recupereesLe | date: 'dd/MM/yyyy à HH:mm' : decalageHoraire() }} ({{
+              libelleHoraire()
+            }}).
+          </p>
+        }
+      } @else {
+        <div
+          role="status"
+          class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+        >
+          @if (m.statut === 'LOCALISATION_MANQUANTE') {
+            <h3 class="font-semibold">Localisation météo non renseignée</h3>
+          } @else if (m.statut === 'LOCALISATION_INVALIDE') {
+            <h3 class="font-semibold">Localisation météo à corriger</h3>
+          } @else {
+            <h3 class="font-semibold">Météo indisponible</h3>
+          }
+          <p class="mt-2">{{ m.message || 'Aucune donnée météo disponible pour le moment.' }}</p>
+          @if (m.statut === 'LOCALISATION_MANQUANTE' || m.statut === 'LOCALISATION_INVALIDE') {
+            @if (authService.possedeRole('ADMIN')) {
+              <a
+                [routerLink]="['/exploitations', m.exploitationId, 'modifier']"
+                class="mt-3 inline-block font-semibold text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                >Compléter les coordonnées de l’exploitation</a
+              >
+            } @else {
+              <p class="mt-2">
+                L’administrateur peut renseigner les coordonnées de l’exploitation.
+              </p>
+            }
+          }
+        </div>
+      }
+    }
+  </div>
+  <footer
+    class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-5 py-3 sm:px-6"
+  >
+    <p class="text-xs text-slate-500">Données météo fournies par OpenWeather</p>
+    <a
+      href="https://openweathermap.org/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="rounded focus-visible:outline-2 focus-visible:outline-emerald-600"
+      aria-label="OpenWeather — ouvrir le site du fournisseur dans un nouvel onglet"
+    >
+      <img
+        src="/images/openweather-logo.png"
+        alt="OpenWeather"
+        width="106"
+        height="60"
+        loading="lazy"
+        class="h-12 w-auto"
+      />
+    </a>
+  </footer>
+</section>

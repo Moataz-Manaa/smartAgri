@@ -3,7 +3,6 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin-guard';
 import { agriculteurGuard } from './core/guards/agriculteur-guard';
 import { lectureGuard } from './core/guards/lecture-guard';
-import { Accueil } from './features/accueil/accueil';
 import { CultureListe } from './features/culture/culture-liste/culture-liste';
 import { CultureFormulaire } from './features/culture/culture-formulaire/culture-formulaire';
 import { VarieteListe } from './features/variete/variete-liste/variete-liste';
@@ -12,13 +11,14 @@ import { ExploitationDetail } from './features/exploitation/exploitation-detail/
 import { AffectationGestion } from './features/affectation/affectation-gestion/affectation-gestion';
 import { AccesRefuse } from './features/acces-refuse/acces-refuse';
 import { ExploitationListe } from './features/exploitation/exploitation-liste/exploitation-liste';
-import { ExploitationFormulaire } from './features/exploitation/exploitation-formulaire/exploitation-formulaire';
 import { ParcelleListe } from './features/parcelle/parcelle-liste/parcelle-liste';
 import { ParcelleFormulaire } from './features/parcelle/parcelle-formulaire/parcelle-formulaire';
 import { UtilisateurListe } from './features/utilisateur/utilisateur-liste/utilisateur-liste';
 import { UtilisateurFormulaire } from './features/utilisateur/utilisateur-formulaire/utilisateur-formulaire';
 
 export const routes: Routes = [
+  { path: 'alertes', loadComponent: chargerListeAlertes, canActivate: [lectureGuard] },
+  { path: 'alertes/:id', loadComponent: chargerDetailAlerte, canActivate: [lectureGuard] },
   {
     path: 'recoltes/nouvelle',
     loadComponent: chargerFormulaireRecolte,
@@ -106,7 +106,7 @@ export const routes: Routes = [
   },
   {
     path: 'accueil',
-    component: Accueil,
+    loadComponent: () => import('./features/accueil/accueil').then((module) => module.Accueil),
     canActivate: [lectureGuard],
   },
   {
@@ -116,12 +116,12 @@ export const routes: Routes = [
   },
   {
     path: 'exploitations/nouvelle',
-    component: ExploitationFormulaire,
+    loadComponent: chargerFormulaireExploitation,
     canActivate: [adminGuard],
   },
   {
     path: 'exploitations/:id/modifier',
-    component: ExploitationFormulaire,
+    loadComponent: chargerFormulaireExploitation,
     canActivate: [adminGuard],
   },
   {
@@ -168,6 +168,22 @@ export const routes: Routes = [
 ];
 
 // Ces écrans sont chargés à leur ouverture pour garder un démarrage léger.
+async function chargerListeAlertes() {
+  const composant = await import('./features/alerte/alerte-liste/alerte-liste');
+  return composant.AlerteListe;
+}
+
+async function chargerDetailAlerte() {
+  const composant = await import('./features/alerte/alerte-detail/alerte-detail');
+  return composant.AlerteDetail;
+}
+
+async function chargerFormulaireExploitation() {
+  const composant =
+    await import('./features/exploitation/exploitation-formulaire/exploitation-formulaire');
+  return composant.ExploitationFormulaire;
+}
+
 async function chargerListeCampagnes() {
   const composant = await import('./features/campagne/campagne-liste/campagne-liste');
   return composant.CampagneListe;

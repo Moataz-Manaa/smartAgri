@@ -1,10 +1,23 @@
 # SmartAgri
 
-Les sprints 1 et 2 sont clôturés : voir le [plan de travail du sprint 2](SPRINT_2.md).
+Les sprints 1, 2 et 3 sont clôturés : voir le [plan du sprint 2](SPRINT_2.md)
+et [la recette du sprint 3](RECETTE_SPRINT_3.md).
 
 Sprint 2 : **100 % — 36 tâches sur 36**, clôturé le **10 novembre 2026**.
 La recette automatisée est réussie et l'utilisateur a validé les vues sur ordinateur et mobile :
 voir [la fiche de recette](RECETTE_SPRINT_2.md).
+
+Le **sprint 3 est clôturé techniquement** : météo, alertes et tableaux de bord métier.
+Voir le [plan de travail du sprint 3](SPRINT_3.md), avec **100 % — 30 tâches sur 30** terminées le **14 novembre 2026**.
+La recette valide 200 tests backend, 189 tests Angular et 30 tests PostgreSQL/Keycloak,
+avec des contrôles visuels distincts à données fictives : voir [les preuves et commandes](RECETTE_SPRINT_3.md).
+La météo OpenWeather s'affiche dans le détail des parcelles : voir [la configuration et le contrat météo](METEO.md).
+Le calcul périodique et les écrans d'alertes sont disponibles : menu latéral « Alertes »,
+filtres, détail, lecture personnelle et compteur de non-lues.
+Voir [les règles, la configuration, le contrat API et l'interface](ALERTES.md).
+L'accueil propose aussi un bilan agricole filtré par période, campagne et parcelle, avec cumuls
+d'irrigation, récoltes, activités récentes et alertes : voir [les tableaux de bord](TABLEAU_DE_BORD.md).
+La prochaine étape est le sprint 4 : Machine Learning et DevOps.
 
 Plateforme intelligente de gestion agricole destinée à une seule société, possédant plusieurs exploitations et parcelles.
 
@@ -332,13 +345,14 @@ ng serve
 
 Ouvrir `http://localhost:4200` et se connecter.
 
-## Vérifications — mise à jour du 10 novembre 2026
+## Vérifications — mise à jour du 12 novembre 2026
 
 | Vérification | Résultat |
 | --- | --- |
-| Compilation et tests backend | 107 tests réussis, incluant l'historique agricole unifié et ses filtres |
-| Recette API avec Keycloak et PostgreSQL réels | 24 tests réussis dans deux conteneurs temporaires, incluant le parcours complet du sprint 2 |
-| Tests Angular | 121 tests réussis, incluant les filtres, la pagination et les états de l'historique |
+| Compilation et tests backend | 139 tests réussis, incluant le client météo, le cache et les autorisations |
+| Recette API avec Keycloak et PostgreSQL réels | 26 tests réussis dans deux conteneurs temporaires, incluant la météo et ses autorisations |
+| Client OpenWeather réel | 1 test optionnel réussi, avec le point public de Sfax |
+| Tests Angular | 148 tests réussis, incluant les cartes météo, leurs états et leur pagination |
 | Compilation Angular de production | Réussie |
 | Réimport du realm Keycloak dans un conteneur neuf | Réussi le 26 octobre 2026 : rôles, Angular, PKCE, audience, secret par variable et permissions du compte technique vérifiés |
 

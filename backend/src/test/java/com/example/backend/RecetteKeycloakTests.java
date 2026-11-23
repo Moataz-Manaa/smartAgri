@@ -20,6 +20,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import java.net.URI;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -42,12 +44,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RecetteKeycloakTests {
     private static KeycloakPanneProxy relais;
     private static String base;
+    private static com.example.backend.support.OpenWeatherServeur meteoServeur;
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String CLIENT_TEST = "smartagri-recette";
     private static final String PREFIXE = "recette-";
     @Autowired MockMvc api;
     @Autowired JdbcTemplate jdbc;
     @Autowired com.example.backend.repository.CampagneRepository campagnes;
+    @Autowired com.example.backend.repository.AlerteRepository alertes;
+    @Autowired com.example.backend.service.AlerteCalculService calculAlertes;
+    @Autowired com.example.backend.service.AlerteGenerationService generationAlertes;
+    @MockitoBean java.time.Clock meteoHorloge;
+    private volatile java.time.Instant dateMeteoForcee;
     private Keycloak administrateur;
     private RealmResource realm;
     private String adminToken;
@@ -63,6 +71,9 @@ class RecetteKeycloakTests {
             throw new IllegalArgumentException("La recette nécessite les services temporaires dédiés.");
         }
         relais = new KeycloakPanneProxy(base);
+        meteoServeur = new com.example.backend.support.OpenWeatherServeur(java.time.Clock.systemUTC());
+        proprietes.add("app.meteo.base-url", meteoServeur::adresse);
+        proprietes.add("app.meteo.api-key", () -> "cle-fictive-recette");
         proprietes.add("spring.datasource.url", () -> bdd);
         proprietes.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         proprietes.add("spring.datasource.username", () -> "smartagri_recette");
@@ -108,7 +119,16 @@ class RecetteKeycloakTests {
 
     @BeforeEach
     void preparerCas() {
+        dateMeteoForcee = null;
+        when(meteoHorloge.instant()).thenAnswer(appel ->
+                dateMeteoForcee == null ? java.time.Instant.now() : dateMeteoForcee);
+        meteoServeur.statut = 200;
+        meteoServeur.delaiMillis = 0;
+        meteoServeur.actuelle = null;
+        meteoServeur.previsions = null;
         relais.reinitialiser();
+        jdbc.update("delete from lectures_alertes");
+        jdbc.update("delete from alertes");
         jdbc.update("delete from recoltes");
         jdbc.update("delete from traitements");
         jdbc.update("delete from fertilisations");
@@ -135,6 +155,7 @@ class RecetteKeycloakTests {
     void fermer() {
         if (administrateur != null) administrateur.close();
         if (relais != null) relais.close();
+        if (meteoServeur != null) meteoServeur.close();
     }
 
     @Test
@@ -1072,6 +1093,372 @@ class RecetteKeycloakTests {
         api.perform(post("/api/" + module).header("Authorization", "Bearer " + jeton)
                 .contentType("application/json").content(JSON.writeValueAsString(demande)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void localisationExploitationAvecPostgresEtDroitsReels() throws Exception {
+        CompteRecette agriculteur = creerCompteConnecte("localisation-agri", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("localisation-agro", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Point meteo",
+                "superficie", 20, "latitude", 0, "longitude", 0));
+        long id = exploitation.get("id").asLong();
+        JsonNode parcelle = creerParcelle("Parcelle meteo", exploitation);
+        affecter(agriculteur, parcelle);
+        affecter(agronome, parcelle);
+        for (String jeton : List.of(agriculteur.token, agronome.token)) {
+            api.perform(get("/api/exploitations/" + id).header("Authorization", "Bearer " + jeton))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(0))
+                    .andExpect(jsonPath("$.longitude").value(0));
+            api.perform(put("/api/exploitations/" + id).header("Authorization", "Bearer " + jeton)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("nom", "Point meteo",
+                            "superficie", 20, "latitude", 34.74, "longitude", 10.76))))
+                    .andExpect(status().isForbidden());
+        }
+        ObjectNode demande = JSON.createObjectNode().put("nom", "Point meteo").put("superficie", 20)
+                .put("latitude", 34.74).put("longitude", 10.76);
+        api.perform(put("/api/exploitations/" + id).header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content(JSON.writeValueAsString(demande)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(34.74));
+        demande.putNull("longitude");
+        api.perform(put("/api/exploitations/" + id).header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content(JSON.writeValueAsString(demande)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.erreurs.coordonneesCompletes").exists());
+        api.perform(get("/api/exploitations/" + id).header("Authorization", "Bearer " + agriculteur.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(34.74))
+                .andExpect(jsonPath("$.longitude").value(10.76));
+        demande.put("latitude", 91).put("longitude", 0);
+        api.perform(put("/api/exploitations/" + id).header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content(JSON.writeValueAsString(demande)))
+                .andExpect(status().isBadRequest());
+        demande.putNull("latitude").putNull("longitude");
+        api.perform(put("/api/exploitations/" + id).header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content(JSON.writeValueAsString(demande)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.longitude").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void meteoParParcelleAvecFournisseurHttpEtDroitsReels() throws Exception {
+        CompteRecette premier = creerCompteConnecte("meteo-premier", "AGRICULTEUR");
+        CompteRecette second = creerCompteConnecte("meteo-second", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("meteo-agronome", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Point meteo recette",
+                "superficie", 20, "latitude", 34.740123, "longitude", 10.76));
+        JsonNode parcelle = creerParcelle("Parcelle meteo", exploitation);
+        JsonNode autre = creerParcelle("Autre parcelle meteo", exploitation);
+        JsonNode affectation = affecter(premier, parcelle);
+        affecter(premier, autre);
+        affecter(second, parcelle);
+        affecter(agronome, parcelle);
+        meteoServeur.appels.set(0);
+        String chemin = "/api/parcelles/" + parcelle.get("id").asLong() + "/meteo";
+        for (String jeton : List.of(adminToken, premier.token, second.token, agronome.token)) {
+            String reponse = api.perform(get(chemin).header("Authorization", "Bearer " + jeton))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("DISPONIBLE"))
+                    .andExpect(jsonPath("$.donnees.conditions.temperatureCelsius").value(22.5))
+                    .andExpect(jsonPath("$.donnees.previsions[0].probabilitePrecipitationsPourcent").value(70))
+                    .andExpect(jsonPath("$.source").value("OpenWeather"))
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(reponse).doesNotContain("cle-fictive-recette", "appid", "apiKey");
+        }
+        api.perform(get("/api/parcelles/" + autre.get("id").asLong() + "/meteo")
+                .header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk());
+        assertThat(meteoServeur.appels.get()).isEqualTo(2);
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get(chemin).header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        api.perform(get(chemin).header("Authorization", "Bearer " + second.token)).andExpect(status().isOk());
+        assertThat(meteoServeur.appels.get()).isEqualTo(2);
+        api.perform(get(chemin)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void persisterEtReevaluerLesAlertesSansDoublonsDansPostgresql() throws Exception {
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Point alertes recette",
+                "superficie", 20, "latitude", 34.75, "longitude", 10.77));
+        JsonNode parcelle = creerParcelle("Parcelle alertes", exploitation);
+        java.time.Instant maintenant = java.time.Instant.now();
+        java.time.Instant echeance = maintenant.plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        var prevision = com.example.backend.dto.meteo.PrevisionMeteoResponse.builder()
+                .datePrevision(echeance).temperatureCelsius(40.0).pluieTroisHeuresMillimetres(20.0).build();
+        var donnees = com.example.backend.dto.meteo.DonneesMeteoResponse.builder().recupereesLe(maintenant)
+                .previsions(List.of(prevision)).build();
+        var meteo = com.example.backend.dto.meteo.MeteoResponse.builder().parcelleId(parcelle.get("id").asLong())
+                .exploitationId(exploitation.get("id").asLong()).latitude(34.75).longitude(10.77)
+                .statut(com.example.backend.enums.StatutMeteo.DISPONIBLE).donnees(donnees).build();
+        calculAlertes.evaluer(parcelle.get("id").asLong(), meteo);
+        calculAlertes.evaluer(parcelle.get("id").asLong(), meteo);
+        assertThat(alertes.findAll()).hasSize(2).allSatisfy(alerte -> {
+            assertThat(alerte.getStatut()).isEqualTo(com.example.backend.enums.StatutAlerte.ACTIVE);
+            assertThat(alerte.getDatePrevision()).isEqualTo(echeance);
+        });
+        var sansRisque = com.example.backend.dto.meteo.PrevisionMeteoResponse.builder()
+                .datePrevision(echeance).temperatureCelsius(22.0).pluieTroisHeuresMillimetres(0.0).build();
+        var nouvelle = com.example.backend.dto.meteo.MeteoResponse.builder().parcelleId(parcelle.get("id").asLong())
+                .exploitationId(exploitation.get("id").asLong()).latitude(34.75).longitude(10.77)
+                .statut(com.example.backend.enums.StatutMeteo.DISPONIBLE)
+                .donnees(com.example.backend.dto.meteo.DonneesMeteoResponse.builder().recupereesLe(java.time.Instant.now())
+                        .previsions(List.of(sansRisque)).build()).build();
+        calculAlertes.evaluer(parcelle.get("id").asLong(), nouvelle);
+        assertThat(alertes.findAll()).hasSize(2).allSatisfy(alerte -> {
+            assertThat(alerte.getStatut()).isEqualTo(com.example.backend.enums.StatutAlerte.LEVEE);
+            assertThat(alerte.getDateCloture()).isNotNull();
+        });
+    }
+
+    @Test
+    void apiAlertesAvecLecturesPersonnellesFiltresEtRetraitDaffectationReels() throws Exception {
+        CompteRecette premier = creerCompteConnecte("alertes-premier", "AGRICULTEUR");
+        CompteRecette second = creerCompteConnecte("alertes-second", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("alertes-agronome", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Point API alertes",
+                "superficie", 20, "latitude", 34.75, "longitude", 10.77));
+        JsonNode partagee = creerParcelle("Partagee alertes", exploitation);
+        JsonNode personnelle = creerParcelle("Personnelle alertes", exploitation);
+        JsonNode horsAcces = creerParcelle("Hors acces alertes", exploitation);
+        JsonNode affectation = affecter(premier, partagee);
+        affecter(premier, personnelle);
+        affecter(second, partagee);
+        affecter(second, horsAcces);
+        affecter(agronome, partagee);
+        java.time.Instant echeance = java.time.Instant.now().plusSeconds(3600)
+                .truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        creerAlertesRecette(partagee, exploitation, 35.0, 40.0, echeance);
+        creerAlertesRecette(personnelle, exploitation, -3.0, 0.0, echeance);
+        creerAlertesRecette(horsAcces, exploitation, 40.0, 0.0, echeance);
+        Long chaleurId = alertes.findAll().stream().filter(a -> a.getParcelle().getId().equals(partagee.get("id").asLong())
+                && a.getType() == com.example.backend.enums.TypeAlerte.CHALEUR).findFirst().orElseThrow().getId();
+        String jour = echeance.atOffset(java.time.ZoneOffset.UTC).toLocalDate().toString();
+        api.perform(get("/api/alertes/pagination").param("parcelleId", partagee.get("id").asText())
+                .param("type", "PLUIE_IMPORTANTE").param("niveau", "CRITIQUE").param("statut", "ACTIVE")
+                .param("lue", "false").param("dateDebut", jour).param("dateFin", jour).param("taille", "1")
+                .header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1)).andExpect(jsonPath("$.contenu[0].type").value("PLUIE_IMPORTANTE"));
+        api.perform(get("/api/alertes/pagination").param("taille", "1").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(4))
+                .andExpect(jsonPath("$.totalPages").value(4));
+        String chemin = "/api/alertes/" + chaleurId;
+        String premiereLecture = api.perform(put(chemin + "/lecture").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(true))
+                .andReturn().getResponse().getContentAsString();
+        String secondeLecture = api.perform(put(chemin + "/lecture").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(JSON.readTree(premiereLecture).get("dateLecture")).isEqualTo(JSON.readTree(secondeLecture).get("dateLecture"));
+        assertThat(jdbc.queryForObject("select count(*) from lectures_alertes", Long.class)).isEqualTo(1);
+        for (String jeton : List.of(second.token, agronome.token, adminToken)) {
+            api.perform(get(chemin).header("Authorization", "Bearer " + jeton)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lue").value(false));
+        }
+        api.perform(get("/api/alertes/pagination").param("lue", "true").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));
+        api.perform(get("/api/alertes/pagination").param("lue", "true").header("Authorization", "Bearer " + second.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        api.perform(get("/api/alertes/compteur").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.activesNonLues").value(2));
+        api.perform(get("/api/alertes/compteur").header("Authorization", "Bearer " + second.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.activesNonLues").value(3));
+        api.perform(get("/api/alertes/compteur").header("Authorization", "Bearer " + agronome.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.activesNonLues").value(2));
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        api.perform(get(chemin).header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        api.perform(put(chemin + "/lecture").header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/alertes/pagination").param("parcelleId", partagee.get("id").asText())
+                .header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/alertes/compteur").param("parcelleId", partagee.get("id").asText())
+                .header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        api.perform(get("/api/alertes/pagination").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.contenu[0].parcelleId").value(personnelle.get("id").asLong()));
+        api.perform(get("/api/alertes/compteur").header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.activesNonLues").value(1));
+        api.perform(get(chemin).header("Authorization", "Bearer " + second.token)).andExpect(status().isOk());
+        affecter(premier, partagee);
+        api.perform(get(chemin).header("Authorization", "Bearer " + premier.token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(true));
+        api.perform(get(chemin)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tableauDeBordAvecCumulsFiltresLecturesEtAffectationsReels() throws Exception {
+        CompteRecette premier = creerCompteConnecte("bilan-premier", "AGRICULTEUR");
+        CompteRecette second = creerCompteConnecte("bilan-second", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("bilan-agronome", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Ferme bilan",
+                "superficie", 20, "latitude", 34.75, "longitude", 10.77));
+        JsonNode partagee = creerParcelle("Oliviers partages", exploitation);
+        JsonNode autre = creerParcelle("Autre parcelle", exploitation);
+        JsonNode affectation = affecter(premier, partagee);
+        affecter(second, partagee); affecter(second, autre); affecter(agronome, partagee);
+        JsonNode culture = creerRessource("/api/cultures", Map.of("nom", "Olivier bilan"));
+        JsonNode variete = creerRessource("/api/varietes", Map.of("nom", "Chemlali", "cultureId", culture.get("id").asLong()));
+        JsonNode campagne = creerRessource("/api/campagnes", Map.of("nom", "Bilan 2020", "dateDebut", "2020-01-01",
+                "dateFin", "2020-12-31", "parcelleIds", List.of(partagee.get("id").asLong(), autre.get("id").asLong())));
+        api.perform(put("/api/campagnes/" + campagne.get("id").asLong() + "/statut").header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json").content("{\"statut\":\"EN_COURS\"}")).andExpect(status().isOk());
+        for (JsonNode parcelle : List.of(partagee, autre)) {
+            long plantation = JSON.readTree(api.perform(post("/api/plantations").header("Authorization", "Bearer " + second.token)
+                    .contentType("application/json").content(JSON.writeValueAsString(Map.of("parcelleId", parcelle.get("id").asLong(),
+                            "campagneId", campagne.get("id").asLong(), "varieteId", variete.get("id").asLong(),
+                            "datePlantation", "2010-01-01", "superficie", 1, "statut", "EN_COURS"))))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+            enregistrerActivite(second.token, "observations", Map.of("plantationId", plantation,
+                    "dateObservation", "2020-06-01", "description", "Observation du bilan"));
+            if (parcelle == partagee) {
+                enregistrerActivite(premier.token, "irrigations", Map.of("plantationId", plantation, "dateIrrigation", "2020-06-01", "volume", 500, "unite", "LITRE"));
+                enregistrerActivite(second.token, "irrigations", Map.of("plantationId", plantation, "dateIrrigation", "2020-06-30", "volume", 2, "unite", "METRE_CUBE"));
+                enregistrerActivite(premier.token, "recoltes", Map.of("plantationId", plantation, "dateRecolte", "2020-06-15", "quantite", 100, "unite", "KILOGRAMME"));
+                enregistrerActivite(second.token, "recoltes", Map.of("plantationId", plantation, "dateRecolte", "2020-06-16", "quantite", 1, "unite", "TONNE"));
+            }
+        }
+        for (String jeton : List.of(premier.token, agronome.token, adminToken)) {
+            api.perform(get("/api/tableau-de-bord/synthese").param("dateDebut", "2020-06-01").param("dateFin", "2020-06-30")
+                    .param("campagneId", campagne.get("id").asText()).header("Authorization", "Bearer " + jeton))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.nombreParcelles").value(jeton.equals(adminToken) ? 2 : 1))
+                    .andExpect(jsonPath("$.nombrePlantations").value(jeton.equals(adminToken) ? 2 : 1))
+                    .andExpect(jsonPath("$.nombreActivites").value(jeton.equals(adminToken) ? 6 : 5))
+                    .andExpect(jsonPath("$.volumeIrrigationMetresCubes").value(2.5))
+                    .andExpect(jsonPath("$.quantiteRecolteeKilogrammes").value(1100));
+            api.perform(get("/api/tableau-de-bord/activites").param("dateDebut", "2020-06-01").param("dateFin", "2020-06-30")
+                    .param("parcelleId", partagee.get("id").asText()).header("Authorization", "Bearer " + jeton))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(5))
+                    .andExpect(jsonPath("$[0].type").value("IRRIGATION"));
+        }
+        java.time.Instant echeance = java.time.Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        creerAlertesRecette(partagee, exploitation, 40.0, 0.0, echeance);
+        creerAlertesRecette(autre, exploitation, 40.0, 0.0, echeance);
+        Long id = alertes.findAll().stream().filter(a -> a.getParcelle().getId().equals(partagee.get("id").asLong())).findFirst().orElseThrow().getId();
+        api.perform(put("/api/alertes/" + id + "/lecture").header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk());
+        String jour = echeance.atOffset(java.time.ZoneOffset.UTC).toLocalDate().toString();
+        for (String jeton : List.of(premier.token, agronome.token, adminToken)) {
+            api.perform(get("/api/tableau-de-bord/alertes").param("dateDebut", jour).param("dateFin", jour)
+                    .param("campagneId", campagne.get("id").asText()).header("Authorization", "Bearer " + jeton))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.actives").value(jeton.equals(adminToken) ? 2 : 1))
+                    .andExpect(jsonPath("$.activesNonLues").value(jeton.equals(premier.token) ? 0 : jeton.equals(adminToken) ? 2 : 1));
+        }
+        api.perform(delete("/api/affectations/" + affectation.get("id").asLong()).header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+        for (String bloc : List.of("synthese", "activites", "alertes")) {
+            api.perform(get("/api/tableau-de-bord/" + bloc).param("parcelleId", partagee.get("id").asText())
+                    .header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+        }
+        api.perform(get("/api/tableau-de-bord/synthese").param("dateDebut", "2020-06-01").param("dateFin", "2020-06-30")
+                .header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombreParcelles").value(0)).andExpect(jsonPath("$.quantiteRecolteeKilogrammes").value(0));
+        api.perform(get("/api/tableau-de-bord/synthese").param("dateDebut", "2020-06-01").param("dateFin", "2020-06-30")
+                .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantiteRecolteeKilogrammes").value(1100));
+    }
+
+    @Test
+    void parcoursCompletSprintTroisAvecPanneFraicheurLectureEtRetraitReels() throws Exception {
+        CompteRecette premier = creerCompteConnecte("sprint3-premier", "AGRICULTEUR");
+        CompteRecette second = creerCompteConnecte("sprint3-second", "AGRICULTEUR");
+        CompteRecette agronome = creerCompteConnecte("sprint3-agronome", "AGRONOME");
+        JsonNode exploitation = creerRessource("/api/exploitations", Map.of("nom", "Recette sprint trois",
+                "superficie", 20, "latitude", 33.123456, "longitude", 9.654321));
+        JsonNode parcelle = creerParcelle("Parcelle sprint trois", exploitation);
+        JsonNode affectation = affecter(premier, parcelle);
+        affecter(second, parcelle); affecter(agronome, parcelle);
+        String meteo = "/api/parcelles/" + parcelle.get("id").asLong() + "/meteo";
+        java.time.Instant debut = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        dateMeteoForcee = debut;
+        java.time.Instant echeance = debut.plusSeconds(3 * 3600);
+        String jour = echeance.atOffset(java.time.ZoneOffset.UTC).toLocalDate().toString();
+        meteoServeur.previsions = "{\"cod\":\"200\",\"city\":{\"timezone\":3600},\"list\":[{\"dt\":"
+                + echeance.getEpochSecond() + ",\"main\":{\"temp\":40,\"humidity\":65},\"pop\":0.8,"
+                + "\"rain\":{\"3h\":40},\"weather\":[{\"description\":\"Prévision fictive de recette\"}]}]}";
+        meteoServeur.appels.set(0);
+        try {
+            api.perform(get(meteo).header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("DISPONIBLE"))
+                    .andExpect(jsonPath("$.donnees.previsions[0].temperatureCelsius").value(40));
+            // Le même service que la tâche planifiée lit le cache collecté par l'API météo.
+            generationAlertes.generer(); generationAlertes.generer();
+            assertThat(meteoServeur.appels.get()).isEqualTo(2);
+            assertThat(alertes.count()).isEqualTo(2);
+            Long id = alertes.findAll().getFirst().getId();
+            for (String jeton : List.of(adminToken, premier.token, second.token, agronome.token)) {
+                api.perform(get("/api/alertes/pagination").param("parcelleId", parcelle.get("id").asText())
+                        .param("statut", "ACTIVE").header("Authorization", "Bearer " + jeton))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2));
+                api.perform(get("/api/tableau-de-bord/alertes").param("dateDebut", jour).param("dateFin", jour)
+                        .header("Authorization", "Bearer " + jeton)).andExpect(status().isOk())
+                        .andExpect(jsonPath("$.actives").value(2)).andExpect(jsonPath("$.activesNonLues").value(2));
+            }
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(false));
+            api.perform(put("/api/alertes/" + id + "/lecture").header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(true));
+            api.perform(get("/api/tableau-de-bord/alertes").param("dateDebut", jour).param("dateFin", jour)
+                    .header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.activesNonLues").value(1));
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + agronome.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(false));
+
+            // Après 16 minutes, le cache est ancien et le fournisseur renvoie un vrai HTTP 503 local.
+            meteoServeur.statut = 503;
+            dateMeteoForcee = debut.plusSeconds(16 * 60);
+            api.perform(get(meteo).header("Authorization", "Bearer " + second.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("PERIMEE"))
+                    .andExpect(jsonPath("$.donnees.previsions[0].temperatureCelsius").value(40));
+            generationAlertes.generer();
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("ACTIVE"))
+                    .andExpect(jsonPath("$.donneesRecentes").value(false)).andExpect(jsonPath("$.lue").value(true));
+            api.perform(get("/api/tableau-de-bord/synthese").header("Authorization", "Bearer " + agronome.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.nombreParcelles").value(1));
+            api.perform(get("/api/tableau-de-bord/alertes").param("dateDebut", jour).param("dateFin", jour)
+                    .header("Authorization", "Bearer " + agronome.token)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.actives").value(2));
+
+            // Au-delà du délai de secours, aucune mesure fictive ne remplace les données indisponibles.
+            dateMeteoForcee = debut.plusSeconds(2 * 3600 + 1);
+            api.perform(get(meteo).header("Authorization", "Bearer " + second.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("INDISPONIBLE"))
+                    .andExpect(jsonPath("$.donnees").value(org.hamcrest.Matchers.nullValue()));
+            generationAlertes.generer();
+            assertThat(alertes.findAll()).allSatisfy(a -> assertThat(a.getStatut()).isEqualTo(com.example.backend.enums.StatutAlerte.ACTIVE));
+            api.perform(delete("/api/affectations/" + affectation.get("id").asLong())
+                    .header("Authorization", "Bearer " + adminToken)).andExpect(status().isNoContent());
+            int appelsAvantRefus = meteoServeur.appels.get();
+            api.perform(get(meteo).header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+            api.perform(put("/api/alertes/" + id + "/lecture").header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+            for (String bloc : List.of("synthese", "activites", "alertes")) {
+                api.perform(get("/api/tableau-de-bord/" + bloc).param("parcelleId", parcelle.get("id").asText())
+                        .header("Authorization", "Bearer " + premier.token)).andExpect(status().isForbidden());
+            }
+            assertThat(meteoServeur.appels.get()).isEqualTo(appelsAvantRefus);
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + second.token)).andExpect(status().isOk());
+            affecter(premier, parcelle);
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.lue").value(true));
+
+            dateMeteoForcee = echeance;
+            api.perform(get("/api/alertes/" + id).header("Authorization", "Bearer " + premier.token))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.statut").value("EXPIREE"));
+            generationAlertes.generer();
+            api.perform(get("/api/tableau-de-bord/alertes").param("dateDebut", jour).param("dateFin", jour)
+                    .header("Authorization", "Bearer " + premier.token)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.actives").value(0)).andExpect(jsonPath("$.activesNonLues").value(0));
+            assertThat(alertes.findAll()).hasSize(2).allSatisfy(a ->
+                    assertThat(a.getStatut()).isEqualTo(com.example.backend.enums.StatutAlerte.EXPIREE));
+        } finally {
+            dateMeteoForcee = null;
+            meteoServeur.statut = 200;
+            meteoServeur.previsions = null;
+        }
+    }
+
+    private void creerAlertesRecette(JsonNode parcelle, JsonNode exploitation, double temperature, double pluie,
+                                     java.time.Instant echeance) {
+        calculAlertes.evaluer(parcelle.get("id").asLong(), com.example.backend.dto.meteo.MeteoResponse.builder()
+                .parcelleId(parcelle.get("id").asLong()).exploitationId(exploitation.get("id").asLong())
+                .latitude(34.75).longitude(10.77).statut(com.example.backend.enums.StatutMeteo.DISPONIBLE)
+                .donnees(com.example.backend.dto.meteo.DonneesMeteoResponse.builder().recupereesLe(java.time.Instant.now())
+                        .previsions(List.of(com.example.backend.dto.meteo.PrevisionMeteoResponse.builder()
+                                .datePrevision(echeance).temperatureCelsius(temperature).pluieTroisHeuresMillimetres(pluie).build()))
+                        .build()).build());
     }
 
     private JsonNode creerRessource(String chemin, Map<String, Object> contenu) throws Exception {

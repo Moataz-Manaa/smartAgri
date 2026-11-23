@@ -4,11 +4,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ParcelleResponse } from '../../../core/models/parcelle';
 import { ParcelleService } from '../../../core/services/parcelle';
 import { PlantationListe } from '../../plantation/plantation-liste/plantation-liste';
+import { MeteoParcelle } from '../../meteo/meteo-parcelle/meteo-parcelle';
 
 @Component({
   selector: 'app-parcelle-detail',
-  imports: [RouterLink, PlantationListe],
+  imports: [RouterLink, PlantationListe, MeteoParcelle],
   templateUrl: './parcelle-detail.html',
+  host: { class: 'block min-w-0' },
 })
 export class ParcelleDetail implements OnInit {
   private route = inject(ActivatedRoute);
