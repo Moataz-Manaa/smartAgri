@@ -13,6 +13,12 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ParcelleRepository extends JpaRepository<Parcelle, Long> {
+
+    @Query("select p.id from Parcelle p order by p.id")
+    List<Long> findIdsPourAlertes(Pageable pagination);
+
+    @Query("select p from Parcelle p join fetch p.exploitation where p.id = :id")
+    Optional<Parcelle> findAvecExploitation(@Param("id") Long id);
     // Verrou court pendant une modification pour conserver les liens cohérents.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Parcelle p where p.id = :id")

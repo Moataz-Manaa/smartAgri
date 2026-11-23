@@ -94,6 +94,90 @@ class AffectationAccesTests {
     }
 
     @Test
+    void coordonneesFacultativesEtZeroValide() throws Exception {
+        for (String coordonnees : new String[]{"", ",\"latitude\":null,\"longitude\":null"}) {
+            api.perform(post("/api/exploitations").header("Authorization", "Bearer admin")
+                    .contentType("application/json").content(demandeLocalisation(coordonnees)))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.latitude").value(nullValue()))
+                    .andExpect(jsonPath("$.longitude").value(nullValue()));
+        }
+        api.perform(post("/api/exploitations").header("Authorization", "Bearer admin")
+                .contentType("application/json").content(demandeLocalisation(",\"latitude\":0,\"longitude\":0")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.latitude").value(0))
+                .andExpect(jsonPath("$.longitude").value(0));
+    }
+
+    @Test
+    void refuserCoordonneesPartiellesSansModifierExploitation() throws Exception {
+        long nombre = exploitations.count();
+        for (String coordonnees : new String[]{",\"latitude\":0", ",\"longitude\":10.76",
+                ",\"latitude\":34.74,\"longitude\":null", ",\"latitude\":null,\"longitude\":0"}) {
+            for (var requete : new org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder[]{
+                    post("/api/exploitations"), put("/api/exploitations/" + sfax.getId())}) {
+                api.perform(requete.header("Authorization", "Bearer admin").contentType("application/json")
+                        .content(demandeLocalisation(coordonnees))).andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.erreurs.coordonneesCompletes").exists());
+            }
+        }
+        assertThat(exploitations.count()).isEqualTo(nombre);
+        assertThat(exploitations.findById(sfax.getId()).orElseThrow().getLatitude()).isNull();
+    }
+
+    @Test
+    void accepterLesLimitesGeographiquesInclusives() throws Exception {
+        for (String coordonnees : new String[]{",\"latitude\":90,\"longitude\":180",
+                ",\"latitude\":-90,\"longitude\":-180", ",\"latitude\":0,\"longitude\":180",
+                ",\"latitude\":90,\"longitude\":0"}) {
+            api.perform(put("/api/exploitations/" + sfax.getId()).header("Authorization", "Bearer admin")
+                    .contentType("application/json").content(demandeLocalisation(coordonnees)))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void refuserLesCoordonneesHorsLimitesEtNonFinies() throws Exception {
+        for (String coordonnees : new String[]{",\"latitude\":90.001,\"longitude\":0",
+                ",\"latitude\":-90.001,\"longitude\":0", ",\"latitude\":0,\"longitude\":180.001",
+                ",\"latitude\":0,\"longitude\":-180.001", ",\"latitude\":\"NaN\",\"longitude\":0",
+                ",\"latitude\":0,\"longitude\":\"Infinity\""}) {
+            api.perform(post("/api/exploitations").header("Authorization", "Bearer admin")
+                    .contentType("application/json").content(demandeLocalisation(coordonnees)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    void modifierEtEffacerLaPaireDeCoordonnees() throws Exception {
+        api.perform(put("/api/exploitations/" + sfax.getId()).header("Authorization", "Bearer admin")
+                .contentType("application/json").content(demandeLocalisation(",\"latitude\":34.74,\"longitude\":10.76")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(34.74));
+        api.perform(get("/api/exploitations/" + sfax.getId()).header("Authorization", "Bearer a"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.longitude").value(10.76));
+        api.perform(put("/api/exploitations/" + sfax.getId()).header("Authorization", "Bearer admin")
+                .contentType("application/json").content(demandeLocalisation(",\"latitude\":null,\"longitude\":null")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.latitude").value(nullValue()))
+                .andExpect(jsonPath("$.longitude").value(nullValue()));
+    }
+
+    @Test
+    void coordonneesModifiablesSeulementParAdministrateur() throws Exception {
+        for (String compte : new String[]{"a", "agronome"}) {
+            for (var requete : new org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder[]{
+                    post("/api/exploitations"), put("/api/exploitations/" + sfax.getId())}) {
+                api.perform(requete.header("Authorization", "Bearer " + compte).contentType("application/json")
+                        .content(demandeLocalisation(",\"latitude\":0,\"longitude\":0")))
+                        .andExpect(status().isForbidden());
+            }
+        }
+        api.perform(put("/api/exploitations/" + sfax.getId()).contentType("application/json")
+                .content(demandeLocalisation(""))).andExpect(status().isUnauthorized());
+    }
+
+    private String demandeLocalisation(String coordonnees) {
+        return "{\"nom\":\"Localisation test\",\"superficie\":20" + coordonnees + "}";
+    }
+
+    @Test
     void filtrerParcellesEtRefuserAccesDirect() throws Exception {
         api.perform(get("/api/parcelles").header("Authorization", "Bearer a"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)))

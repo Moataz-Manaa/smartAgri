@@ -41,6 +41,13 @@
         <dd class="mt-1 whitespace-pre-line">{{ p.description || 'Aucune description' }}</dd>
       </div>
     </dl>
+    <a
+      routerLink="/alertes"
+      [queryParams]="{ parcelleId: p.id }"
+      class="mt-6 inline-block rounded-lg border border-emerald-700 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >Consulter les alertes de cette parcelle</a
+    >
+    <div class="mt-8"><app-meteo-parcelle [parcelleId]="p.id" /></div>
     <div class="mt-10"><app-plantation-liste [parcelleId]="p.id" /></div>
   }
 </section>

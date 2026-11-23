@@ -1,4 +1,5 @@
 import { HistoriqueService } from '../../core/services/historique';
+import { MeteoService } from '../../core/services/meteo';
 import { RecolteService } from '../../core/services/recolte';
 import { TraitementService } from '../../core/services/traitement';
 import { FertilisationService } from '../../core/services/fertilisation';
@@ -63,6 +64,24 @@ describe('Plantations par campagne', () => {
     };
     TestBed.configureTestingModule({
       providers: [
+        {
+          provide: MeteoService,
+          useValue: {
+            consulterParParcelle: () =>
+              of({
+                parcelleId: 11,
+                exploitationId: 1,
+                exploitationNom: 'Sfax',
+                latitude: null,
+                longitude: null,
+                statut: 'LOCALISATION_MANQUANTE',
+                message: 'Localisation non renseignée',
+                source: 'OpenWeather',
+                lienSource: 'https://openweathermap.org/',
+                donnees: null,
+              }),
+          },
+        },
         {
           provide: HistoriqueService,
           useValue: {

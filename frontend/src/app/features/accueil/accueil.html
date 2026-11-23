@@ -52,7 +52,7 @@
   </div>
 
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-    <h2 class="text-xl font-bold text-slate-900">Vue d’ensemble</h2>
+    <h2 class="text-xl font-bold text-slate-900">Organisation actuelle</h2>
   </div>
   @if (chargement()) {
     <p role="status" class="mb-4 text-sm text-slate-500">Chargement des indicateurs…</p>
@@ -107,6 +107,8 @@
       }
     </div>
   }
+
+  <app-tableau-de-bord />
 
   @if (estAdministrateur()) {
     <h2 class="mb-4 mt-8 text-xl font-bold text-slate-900">Actions rapides</h2>

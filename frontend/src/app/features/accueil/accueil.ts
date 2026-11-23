@@ -7,10 +7,11 @@ import { ExploitationService } from '../../core/services/exploitation';
 import { ParcelleService } from '../../core/services/parcelle';
 import { UtilisateurService } from '../../core/services/utilisateur';
 import { AffectationService } from '../../core/services/affectation';
+import { TableauDeBord } from '../tableau-de-bord/tableau-de-bord';
 
 @Component({
   selector: 'app-accueil',
-  imports: [RouterLink],
+  imports: [RouterLink, TableauDeBord],
   templateUrl: './accueil.html',
   styleUrl: './accueil.css',
 })

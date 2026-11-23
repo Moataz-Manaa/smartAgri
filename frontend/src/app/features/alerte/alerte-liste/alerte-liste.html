@@ -1,0 +1,218 @@
+<section aria-labelledby="titre-alertes">
+  <header class="mb-6">
+    <p class="text-sm font-semibold text-emerald-700">Suivi agricole</p>
+    <h1 id="titre-alertes" class="mt-2 text-3xl font-bold text-slate-900">Alertes agricoles</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      Les alertes des parcelles auxquelles vous avez accès. Votre lecture reste personnelle.
+    </p>
+  </header>
+
+  <div
+    class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 sm:p-6"
+  >
+    <div>
+      <h2 class="text-sm font-semibold text-emerald-900">Alertes actives non lues</h2>
+      @if (chargementCompteur()) {
+        <p role="status" class="mt-2 text-sm text-slate-600">Chargement du compteur…</p>
+      } @else if (erreurCompteur()) {
+        <p role="alert" class="mt-2 text-sm text-red-800">{{ erreurCompteur() }}</p>
+      } @else if (compteur(); as c) {
+        <p class="mt-1 text-3xl font-bold text-emerald-900">
+          {{ c.activesNonLues | number: '1.0-0' }}
+        </p>
+        <p class="mt-1 text-xs text-emerald-900">
+          Calculé le {{ c.calculeLe | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }} UTC.
+        </p>
+      } @else {
+        <p class="mt-2 text-sm text-slate-600">Compteur indisponible.</p>
+      }
+      <p class="mt-2 text-sm text-emerald-900">
+        {{
+          filtresAppliques.parcelleId === null
+            ? 'Toutes les parcelles accessibles'
+            : 'Parcelle sélectionnée'
+        }}, indépendamment des autres filtres.
+      </p>
+    </div>
+    @if (compteur()) {
+      <button
+        type="button"
+        (click)="afficherNonLues()"
+        [disabled]="chargement()"
+        class="rounded-lg border border-emerald-700 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Afficher les non lues
+      </button>
+    }
+  </div>
+
+  <form
+    (ngSubmit)="appliquer()"
+    class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    aria-labelledby="titre-filtres-alertes"
+  >
+    <h2 id="titre-filtres-alertes" class="text-lg font-bold text-slate-900">Filtrer les alertes</h2>
+    <p class="mt-1 text-sm text-slate-500">
+      Les dates portent sur l'échéance météo, par journées UTC inclusives.
+    </p>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div>
+        <label for="alerte-parcelle" class="libelle">Parcelle</label>
+        <select
+          id="alerte-parcelle"
+          name="parcelleId"
+          [(ngModel)]="filtres.parcelleId"
+          class="champ"
+          [disabled]="!!erreurParcelles()"
+        >
+          <option [ngValue]="null">Toutes les parcelles accessibles</option>
+          @for (p of parcelles(); track p.id) {
+            <option [ngValue]="p.id">{{ p.code }} — {{ p.nom }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="alerte-type" class="libelle">Type d'alerte</label>
+        <select id="alerte-type" name="type" [(ngModel)]="filtres.type" class="champ">
+          <option value="">Tous les types</option>
+          <option value="CHALEUR">Chaleur</option>
+          <option value="GEL">Gel</option>
+          <option value="PLUIE_IMPORTANTE">Pluie importante</option>
+        </select>
+      </div>
+      <div>
+        <label for="alerte-niveau" class="libelle">Niveau</label>
+        <select id="alerte-niveau" name="niveau" [(ngModel)]="filtres.niveau" class="champ">
+          <option value="">Tous les niveaux</option>
+          <option value="AVERTISSEMENT">Avertissement</option>
+          <option value="CRITIQUE">Critique</option>
+        </select>
+      </div>
+      <div>
+        <label for="alerte-statut" class="libelle">État de l'alerte</label>
+        <select id="alerte-statut" name="statut" [(ngModel)]="filtres.statut" class="champ">
+          <option value="">Tous les états</option>
+          <option value="ACTIVE">Active</option>
+          <option value="LEVEE">Levée</option>
+          <option value="EXPIREE">Expirée</option>
+        </select>
+      </div>
+      <div>
+        <label for="alerte-lecture" class="libelle">Votre lecture</label>
+        <select id="alerte-lecture" name="lue" [(ngModel)]="filtres.lue" class="champ">
+          <option [ngValue]="null">Lues et non lues</option>
+          <option [ngValue]="false">Non lues</option>
+          <option [ngValue]="true">Lues par vous</option>
+        </select>
+      </div>
+      <div>
+        <label for="alerte-debut" class="libelle">Échéance du (UTC)</label>
+        <input
+          id="alerte-debut"
+          name="dateDebut"
+          type="date"
+          min="0001-01-01"
+          max="9999-12-31"
+          [(ngModel)]="filtres.dateDebut"
+          class="champ"
+        />
+      </div>
+      <div>
+        <label for="alerte-fin" class="libelle">Au (UTC)</label>
+        <input
+          id="alerte-fin"
+          name="dateFin"
+          type="date"
+          [min]="filtres.dateDebut || '0001-01-01'"
+          max="9999-12-31"
+          [(ngModel)]="filtres.dateFin"
+          class="champ"
+        />
+      </div>
+    </div>
+    @if (erreurParcelles()) {
+      <p role="status" class="mt-3 text-sm text-amber-900">{{ erreurParcelles() }}</p>
+    }
+    @if (erreurFiltre()) {
+      <p role="alert" class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+        {{ erreurFiltre() }}
+      </p>
+    }
+    <div class="mt-5 flex flex-wrap gap-3">
+      <button
+        type="submit"
+        class="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Filtrer
+      </button>
+      <button
+        type="button"
+        (click)="reinitialiser()"
+        class="rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+      >
+        Réinitialiser les filtres
+      </button>
+    </div>
+  </form>
+
+  @if (chargement()) {
+    <p role="status" class="rounded-xl bg-white p-8 text-center text-slate-600">
+      Chargement des alertes…
+    </p>
+  } @else if (erreur()) {
+    <p role="alert" class="rounded-xl bg-red-50 p-5 text-red-800">{{ erreur() }}</p>
+  } @else if (!erreurFiltre() && alertes().length === 0) {
+    <p
+      class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600"
+    >
+      Aucune alerte pour cette sélection.
+    </p>
+  } @else {
+    <ul aria-label="Alertes de la sélection" class="space-y-4">
+      @for (a of alertes(); track a.id) {
+        <li class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <app-alerte-badges [alerte]="a" />
+          <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <h2 class="text-lg font-bold text-slate-900">
+                {{ a.type | alerteLibelle }} — {{ a.parcelleCode }}
+              </h2>
+              <p class="mt-1 break-words text-sm text-slate-600">
+                {{ a.parcelleNom }} · {{ a.exploitationNom }}
+              </p>
+              <p class="mt-3 text-sm font-medium text-slate-800">
+                Échéance : {{ a.datePrevision | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }} UTC
+              </p>
+              <p class="mt-1 text-sm text-slate-600">{{ a.message }}</p>
+              @if (!a.donneesRecentes) {
+                <p class="mt-3 text-sm font-medium text-amber-900">
+                  Données météo anciennes : consultez leur date de récupération dans le détail.
+                </p>
+              }
+            </div>
+            <a
+              [routerLink]="['/alertes', a.id]"
+              [queryParams]="parametresRetour()"
+              [attr.aria-label]="
+                'Consulter l’alerte ' + (a.type | alerteLibelle) + ' de ' + a.parcelleCode
+              "
+              class="rounded-lg border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+              >Consulter</a
+            >
+          </div>
+        </li>
+      }
+    </ul>
+  }
+  @if (!erreur() && !erreurFiltre()) {
+    <app-pagination
+      [page]="page()"
+      [taille]="taille()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      [desactive]="chargement()"
+      (pageChange)="chargerPage($event)"
+      (tailleChange)="changerTaille($event)"
+    />
+  }
+</section>

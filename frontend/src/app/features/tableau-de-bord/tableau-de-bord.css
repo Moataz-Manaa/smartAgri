@@ -1,0 +1,42 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.champ {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 3rem;
+  margin-top: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  color: #0f172a;
+  font: inherit;
+  color-scheme: light;
+}
+.champ:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
+.champ:disabled {
+  background: #f1f5f9;
+}
+.indicateur {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: white;
+  padding: 1.25rem;
+}
+.libelle {
+  color: #475569;
+  font-size: 0.875rem;
+}
+.valeur {
+  margin-top: 0.5rem;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}

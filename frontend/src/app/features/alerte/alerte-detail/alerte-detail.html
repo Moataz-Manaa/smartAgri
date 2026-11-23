@@ -1,0 +1,142 @@
+<section class="mx-auto max-w-4xl" aria-labelledby="titre-alerte">
+  <a
+    routerLink="/alertes"
+    [queryParams]="retour"
+    class="font-medium text-emerald-700 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-600"
+    >← Retour aux alertes</a
+  >
+  @if (chargement()) {
+    <h1 id="titre-alerte" class="mt-6 text-3xl font-bold text-slate-900">Détail de l'alerte</h1>
+    <p role="status" class="mt-5 text-slate-600">Chargement de l'alerte…</p>
+  } @else if (erreur()) {
+    <h1 id="titre-alerte" class="mt-6 text-3xl font-bold text-slate-900">Détail de l'alerte</h1>
+    <p role="alert" class="mt-5 rounded-xl bg-red-50 p-5 text-red-800">{{ erreur() }}</p>
+  } @else if (alerte(); as a) {
+    <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <app-alerte-badges [alerte]="a" />
+      <h1 id="titre-alerte" class="mt-4 text-3xl font-bold text-slate-900">
+        {{ a.type | alerteLibelle }}
+      </h1>
+      <a
+        [routerLink]="['/parcelles', a.parcelleId]"
+        class="mt-2 inline-block font-semibold text-emerald-700 hover:underline"
+        >{{ a.parcelleCode }} — {{ a.parcelleNom }}</a
+      >
+      <p class="mt-1 text-sm text-slate-500">{{ a.exploitationNom }}</p>
+      <p class="mt-5 leading-relaxed text-slate-700">{{ a.message }}</p>
+      @if (a.motifCloture) {
+        <p class="mt-4 rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{{ a.motifCloture }}</p>
+      }
+      @if (!a.donneesRecentes) {
+        <p
+          role="status"
+          class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          Les données météo à l'origine de cette alerte sont anciennes. La date de récupération est
+          indiquée ci-dessous.
+        </p>
+      }
+      <div class="mt-6 border-t border-slate-100 pt-5">
+        @if (a.lue) {
+          <p class="font-semibold text-emerald-800">
+            Lue par vous le {{ a.dateLecture | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }} UTC.
+          </p>
+        } @else {
+          <button
+            type="button"
+            (click)="marquerLue()"
+            [disabled]="enregistrement()"
+            [attr.aria-busy]="enregistrement()"
+            class="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-emerald-600"
+          >
+            {{ enregistrement() ? 'Enregistrement…' : 'Marquer comme lue' }}
+          </button>
+        }
+        <p class="mt-2 text-sm text-slate-500">
+          Cette action concerne votre compte. Elle ne lève pas l'alerte.
+        </p>
+        @if (confirmation()) {
+          <p role="status" class="mt-3 text-sm font-medium text-emerald-800">
+            {{ confirmation() }}
+          </p>
+        }
+        @if (erreurLecture()) {
+          <p role="alert" class="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+            {{ erreurLecture() }}
+          </p>
+        }
+      </div>
+    </div>
+    <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-slate-900">Données à l'origine de l'alerte</h2>
+      <dl class="mt-5 grid gap-5 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-slate-500">Valeur prévue</dt>
+          <dd class="mt-1 text-xl font-bold text-slate-900">
+            {{ a.valeur | number: '1.0-2' }} {{ a.unite }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Seuil de suivi</dt>
+          <dd class="mt-1 text-xl font-bold text-slate-900">
+            {{ a.type === 'GEL' ? '≤' : '≥' }} {{ a.seuil | number: '1.0-2' }} {{ a.unite }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Échéance (UTC)</dt>
+          <dd class="mt-1 font-medium">
+            {{ a.datePrevision | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+          </dd>
+        </div>
+        @if (a.type === 'PLUIE_IMPORTANTE') {
+          <div>
+            <dt class="text-slate-500">Début du créneau de pluie (UTC)</dt>
+            <dd class="mt-1 font-medium">
+              {{ a.debutPeriode | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+            </dd>
+          </div>
+        }
+        <div>
+          <dt class="text-slate-500">Source</dt>
+          <dd class="mt-1 font-medium">{{ a.source }}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Point de l'exploitation</dt>
+          <dd class="mt-1 font-medium">
+            {{ a.latitude | number: '1.0-5' }}, {{ a.longitude | number: '1.0-5' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Données récupérées le (UTC)</dt>
+          <dd class="mt-1 font-medium">
+            {{ a.dateRecuperationMeteo | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Dernière vérification (UTC)</dt>
+          <dd class="mt-1 font-medium">
+            {{ a.derniereVerification | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Alerte détectée le (UTC)</dt>
+          <dd class="mt-1 font-medium">
+            {{ a.dateDetection | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+          </dd>
+        </div>
+        @if (a.dateCloture) {
+          <div>
+            <dt class="text-slate-500">Clôture enregistrée le (UTC)</dt>
+            <dd class="mt-1 font-medium">
+              {{ a.dateCloture | date: 'dd/MM/yyyy à HH:mm' : 'UTC' }}
+            </dd>
+          </div>
+        }
+      </dl>
+      <p class="mt-6 border-t border-slate-100 pt-4 text-sm leading-relaxed text-slate-500">
+        Règle de suivi fondée sur une estimation au point de l'exploitation. Les seuils doivent être
+        adaptés au contexte agricole.
+      </p>
+    </div>
+  }
+</section>
